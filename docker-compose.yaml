@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  tts:
+    image: bob-q3tts:latest
+    build:
+      context: .
+      args:
+        - ROS_DISTRO=humble
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      # Set ROS parameters via environment variables if supported by the node logic
+      # or pass them directly in the command.
+      - Q3TTS_MODEL_DIR=/models
+      - Q3TTS_LANGUAGE=German
+      - Q3TTS_PLAY=true
+      - Q3TTS_VOICE_REF_AUDIO=/app/ros2_ws/src/bob_q3tts/config/eva_24khz.wav
+      - Q3TTS_VOICE_REF_TEXT=/app/ros2_ws/src/bob_q3tts/config/voice_ref_text.txt
+    volumes:
+      - ./models:/models
+      - ./config:/app/ros2_ws/src/bob_q3tts/config
+      # Pass ALSA configuration to the container if needed
+      # - /etc/asound.conf:/etc/asound.conf:ro
+    devices:
+      - /dev/snd:/dev/snd
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    network_mode: host
+    # Visible command line examples with variables
+    command: >
+      ros2 run bob_q3tts tts --ros-args 
+      -p model_dir:=/models 
+      -p language:=German 
+      -p play:=true 
+      -p temperature:=0.2 
+      -p do_sample:=false
