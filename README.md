@@ -1,4 +1,4 @@
-# bob_q3tts
+# ROS Package [bob_q3tts](https://github.com/bob-ros2/bob_q3tts)
 
 A ROS 2 wrapper for the **Qwen3-TTS** model, providing high-fidelity, low-latency text-to-speech with streaming aggregation and voice cloning capabilities. It also includes a Qt-based GUI for real-time parameter tuning.
 
