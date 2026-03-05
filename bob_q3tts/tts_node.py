@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import argparse
-import numpy as np
 import os
 import queue
 import subprocess
@@ -21,19 +20,22 @@ import tempfile
 import threading
 import time
 
+import numpy as np
+
 from ament_index_python.packages import get_package_share_directory
-from rcl_interfaces.msg import ParameterDescriptor
-from rcl_interfaces.msg import ParameterType
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from rcl_interfaces.msg import ParameterDescriptor
+from rcl_interfaces.msg import ParameterType
 from std_msgs.msg import Int16MultiArray
+from std_msgs.msg import String
 
 
 class TTSnode(Node):
     """ROS node that provides an interface to Qwen3-TTS with streaming text aggregation."""
 
     def __init__(self):
+        """Initialize the TTS node and its parameters."""
         super().__init__('tts')
 
         # Get package share directory for defaults
@@ -582,6 +584,7 @@ class TTSnode(Node):
 
 
 def main(args=None):
+    """Main entry point for the tts_node."""
 
     parser = argparse.ArgumentParser(
         description='ROS node that provides an interface to Qwen3-TTS '

@@ -22,15 +22,15 @@ from PyQt5.QtWidgets import (
 )
 import rclpy
 from rclpy.node import Node
-
 from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
-from rcl_interfaces.srv import SetParameters, GetParameters
+from rcl_interfaces.srv import GetParameters, SetParameters
 
 
 class GUInode(Node, QMainWindow):
     """ROS 2 node with a Qt GUI for tuning TTS parameters."""
 
     def __init__(self):
+        """Initialize the GUI node and its UI components."""
         # Initialize ROS node
         Node.__init__(self, 'tts_gui')
         # Initialize Qt Window
@@ -229,19 +229,23 @@ class GUInode(Node, QMainWindow):
             self.get_logger().error(f"Failed to sync parameters: {e}")
 
     def on_bool_change(self, name, state):
+        """Update a boolean parameter."""
         val = (state == Qt.Checked)
         self.set_ros_param(name, ParameterType.PARAMETER_BOOL, val)
 
     def on_int_change(self, name, val, label):
+        """Update an integer parameter and its label."""
         label.setText(str(val))
         self.set_ros_param(name, ParameterType.PARAMETER_INTEGER, int(val))
 
     def on_double_change(self, name, val, scale, label):
+        """Update a double parameter and its label."""
         real_val = val / float(scale)
         label.setText(f"{real_val:.2f}")
         self.set_ros_param(name, ParameterType.PARAMETER_DOUBLE, float(real_val))
 
     def on_string_change(self, name, val):
+        """Update a string parameter."""
         self.set_ros_param(name, ParameterType.PARAMETER_STRING, str(val))
 
     def set_ros_param(self, name, p_type, val):
@@ -273,6 +277,7 @@ class GUInode(Node, QMainWindow):
 
 
 def main(args=None):
+    """Main entry point for the gui_node."""
     rclpy.init(args=args)
 
     app = QApplication(sys.argv)
