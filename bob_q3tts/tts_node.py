@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
+import numpy as np
 import os
 import queue
 import subprocess
@@ -25,6 +27,7 @@ from rcl_interfaces.msg import ParameterType
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from std_msgs.msg import Int16MultiArray
 
 
 class TTSnode(Node):
@@ -201,11 +204,27 @@ class TTSnode(Node):
             )
         )
         self.declare_parameter(
+            'audio_device',
+            os.environ.get('Q3TTS_AUDIO_DEVICE', ''),
+            ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description='Device ID or name for sounddevice playback.'
+            )
+        )
+        self.declare_parameter(
             'file_prefix',
             os.environ.get('Q3TTS_FILE_PREFIX', ''),
             ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING,
                 description='Prefix for saved audio files.'
+            )
+        )
+        self.declare_parameter(
+            'target_sample_rate',
+            int(os.environ.get('Q3TTS_TARGET_SAMPLE_RATE', '0')),
+            ParameterDescriptor(
+                type=ParameterType.PARAMETER_INTEGER,
+                description='Force resampling to this rate (0 for auto).'
             )
         )
         self.declare_parameter(
@@ -224,6 +243,7 @@ class TTSnode(Node):
         self.audio_queue = queue.Queue()
         self.lock = threading.Lock()
         self.file_index = self.get_parameter('file_start_index').value
+        self.inferred_target_sr = None
 
         # 3. Subscriber & Publisher
         self.sub = self.create_subscription(
@@ -235,6 +255,11 @@ class TTSnode(Node):
         self.pub = self.create_publisher(
             String,
             'spoken_text',
+            10
+        )
+        self.audio_pub = self.create_publisher(
+            Int16MultiArray,
+            'audio_raw',
             10
         )
 
@@ -429,7 +454,21 @@ class TTSnode(Node):
                 self.pub.publish(msg)
                 self.get_logger().info(f"Speaking: '{spoken_text}'")
 
-                # 3. Play if enabled
+                # 3. Stream raw audio if subscribed (Bridge for streamer)
+                if self.audio_pub.get_subscription_count() > 0:
+                    try:
+                        # 44100 Hz resample for the bridge
+                        stream_audio = self.resample_audio(audio_data, sr, 44100)
+                        # Float32 -> Int16 conversion (+ scaling)
+                        stream_int16 = (stream_audio * 32767).astype(np.int16)
+                        
+                        audio_msg = Int16MultiArray()
+                        audio_msg.data = stream_int16.flatten().tolist()
+                        self.audio_pub.publish(audio_msg)
+                    except Exception as e:
+                        self.get_logger().error(f"Failed to stream raw audio: {e}")
+
+                # 4. Play if enabled
                 if self.get_parameter('play').value:
                     self.play_audio(audio_data, sr)
 
@@ -447,12 +486,32 @@ class TTSnode(Node):
         if player == 'sys':
             # Use Python-native library (sounddevice)
             if self.sd is not None:
+                # 1. Resolve target sample rate (explicit param > inferred working rate > model native)
+                target_sr = self.get_parameter('target_sample_rate').value
+                if target_sr <= 0 and self.inferred_target_sr:
+                    target_sr = self.inferred_target_sr
+
+                if target_sr > 0 and target_sr != sr:
+                    audio_data = self.resample_audio(audio_data, sr, target_sr)
+                    sr = target_sr
+
+                # 2. Attempt playback
                 try:
-                    # sounddevice.play is non-blocking, we use wait() to simulate blocking
-                    # as requested by the original design (serial processing)
-                    self.sd.play(audio_data, sr)
-                    self.sd.wait()
+                    self._do_native_play(audio_data, sr)
                 except Exception as e:
+                    # If auto-resample failed or was invalid, try 48000 (standard for HDMI)
+                    if "Invalid sample rate" in str(e) and sr != 48000:
+                        self.get_logger().warn(f"Playback at {sr}Hz failed. Retrying at 48000Hz fallback.")
+                        resampled_data = self.resample_audio(audio_data, sr, 48000)
+                        try:
+                            self._do_native_play(resampled_data, 48000)
+                            # If fallback succeeded, remember this for next time
+                            self.inferred_target_sr = 48000
+                            self.get_logger().info("Sticky sample rate set to 48000Hz.")
+                            return
+                        except Exception as e2:
+                            self.get_logger().error(f"Retry at 48000Hz failed: {e2}")
+
                     self.get_logger().warn(f"Native playback failed: {e}. Falling back to aplay.")
                     self._play_with_executable('aplay', audio_data, sr)
             else:
@@ -461,6 +520,34 @@ class TTSnode(Node):
         else:
             # Use configured external player
             self._play_with_executable(player, audio_data, sr)
+
+    def _do_native_play(self, audio_data, sr):
+        """Internal helper for sounddevice.play."""
+        device = self.get_parameter('audio_device').value
+        if device:
+            try:
+                device = int(device)
+            except ValueError:
+                pass
+            self.sd.play(audio_data, sr, device=device)
+        else:
+            self.sd.play(audio_data, sr)
+        self.sd.wait()
+
+    def resample_audio(self, audio_data, orig_sr, target_sr):
+        """Resample audio data using librosa if available, else linear interpolation."""
+        try:
+            import librosa
+            return librosa.resample(audio_data, orig_sr=orig_sr, target_sr=target_sr)
+        except ImportError:
+            self.get_logger().warn("librosa not installed. Using simple numpy interpolation.")
+            duration = len(audio_data) / orig_sr
+            num_samples = int(duration * target_sr)
+            return np.interp(
+                np.linspace(0, len(audio_data), num_samples),
+                np.arange(len(audio_data)),
+                audio_data
+            ).astype(audio_data.dtype)
 
     def _play_with_executable(self, executable, audio_data, sr):
         """Play audio using an external command."""
@@ -492,6 +579,19 @@ class TTSnode(Node):
 
 
 def main(args=None):
+
+    parser = argparse.ArgumentParser(
+        description='ROS node that provides an interface to Qwen3-TTS with streaming text aggregation.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        '-l', '--list', action="store_true", help='list available audodevices')
+    parsed, remaining = parser.parse_known_args()
+
+    if parsed.list:
+        import sounddevice as sd
+        print(sd.query_devices())
+        parser.exit(0)
+
     rclpy.init(args=args)
     node = TTSnode()
     try:

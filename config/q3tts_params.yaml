@@ -1,0 +1,24 @@
+/tts:
+  ros__parameters:
+    model_id: "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+    model_dir: "./models"
+    language: "auto"
+    sentence_delimiters: [",", ".", ":", ";", "!", "?"]
+    flush_timeout: 700
+    do_sample: true
+    temperature: 0.9
+    top_p: 1.0
+    top_k: 50
+    repetition_penalty: 1.05
+    subtalker_dosample: true
+    subtalker_temperature: 0.9
+    subtalker_top_p: 1.0
+    subtalker_top_k: 50
+    voice_ref_audio: "./eva_24khz.wav"
+    voice_ref_text: "./voice_ref_text.txt"
+    play: true
+    player: "sys"
+    audio_device: ""
+    file_prefix: ""
+    target_sample_rate: 0
+    file_start_index: 1

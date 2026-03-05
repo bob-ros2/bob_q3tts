@@ -103,6 +103,10 @@ class GUInode(Node, QMainWindow):
              "group": "Logic"},
             {"name": "play", "type": "bool", "label": "Real-time Playback",
              "group": "Logic"},
+            {"name": "audio_device", "type": "string", "label": "Audio Device (ID/Name)",
+             "group": "Logic"},
+            {"name": "target_sample_rate", "type": "int", "min": 0, "max": 96000,
+             "label": "Target SR (0=auto)", "group": "Logic"},
         ]
 
         self.groups = {}

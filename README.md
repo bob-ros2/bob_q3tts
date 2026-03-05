@@ -14,6 +14,50 @@ A ROS 2 wrapper for the **Qwen3-TTS** model, providing high-fidelity, low-latenc
    ros2 run bob_q3tts gui
    ```
 
+### Docker Usage
+
+#### Using Docker Compose (Recommended)
+```bash
+docker-compose build
+docker-compose up
+```
+
+#### Using Docker CLI
+1. **Build the Image**:
+   ```bash
+   docker build -t bob_q3tts .
+   ```
+
+2. **Run the Node** (with GPU and Audio):
+   ```bash
+   docker run -it --rm \
+     --gpus all \
+     --device /dev/snd \
+     -e Q3TTS_MODEL_DIR=/models \
+     -e ROS_DOMAIN_ID=99 \
+     -v  /blue/dev/q3tts/models:/models \
+     --network host \
+     --ipc host \
+     bob-q3tts:latest
+   ```
+
+## Troubleshooting Audio
+
+If you hear no sound or see "Invalid sample rate" errors (common with HDMI/GPU audio):
+
+1. **List Devices** (inside container):
+   ```bash
+   python3 -c "import sounddevice as sd; print(sd.query_devices())"
+   ```
+2. **Set Device**: Find the index or name (e.g., `HDA NVidia: HDMI 0 (hw:2,3)`) and set the `audio_device` parameter.
+3. **Force Resampling**: If your hardware only supports 48kHz, set `target_sample_rate` to `48000`.
+
+Example:
+```bash
+ros2 param set /tts audio_device "HDA NVidia: HDMI 0 (hw:2,3)"
+ros2 param set /tts target_sample_rate 48000
+```
+
 ## ROS API
 
 ### Topics
@@ -66,5 +110,6 @@ The node uses static configuration for initialization and dynamic parameters for
 | :--- | :--- | :--- |
 | `play` | `bool` | Enable/disable audio playback. Env: `Q3TTS_PLAY` (Default: `true`) |
 | `player` | `string` | Player: `sys` (native) or executable path. Env: `Q3TTS_PLAYER` (Default: `sys`) |
+| `audio_device` | `string` | Device ID or name for sounddevice. Env: `Q3TTS_AUDIO_DEVICE` (Default: `""`) |
 | `file_prefix` | `string` | Prefix for saving audio files. Env: `Q3TTS_FILE_PREFIX` (Default: `""`) |
 | `file_start_index` | `integer` | Starting index for file naming. Env: `Q3TTS_FILE_START_INDEX` (Default: `1`) |
