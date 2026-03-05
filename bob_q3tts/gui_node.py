@@ -20,10 +20,10 @@ from PyQt5.QtWidgets import (
     QApplication, QCheckBox, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QMainWindow, QScrollArea, QSlider, QVBoxLayout, QWidget, QPushButton
 )
-import rclpy
-from rclpy.node import Node
 from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
 from rcl_interfaces.srv import GetParameters, SetParameters
+import rclpy
+from rclpy.node import Node
 
 
 class GUInode(Node, QMainWindow):
