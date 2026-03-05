@@ -277,7 +277,7 @@ class GUInode(Node, QMainWindow):
 
 
 def main(args=None):
-    """Main entry point for the gui_node."""
+    """Start the GUI node."""
     rclpy.init(args=args)
 
     app = QApplication(sys.argv)

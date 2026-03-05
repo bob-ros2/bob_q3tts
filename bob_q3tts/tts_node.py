@@ -527,7 +527,7 @@ class TTSnode(Node):
             self._play_with_executable(player, audio_data, sr)
 
     def _do_native_play(self, audio_data, sr):
-        """Internal helper for sounddevice.play."""
+        """Perform native audio playback using sounddevice."""
         device = self.get_parameter('audio_device').value
         if device:
             try:
@@ -584,8 +584,7 @@ class TTSnode(Node):
 
 
 def main(args=None):
-    """Main entry point for the tts_node."""
-
+    """Start the TTS node."""
     parser = argparse.ArgumentParser(
         description='ROS node that provides an interface to Qwen3-TTS '
                     'with streaming text aggregation.',
