@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   tts:
-    image: bob-q3tts:latest
+    image: ghcr.io/bob-ros2/bob-q3tts:latest
     build:
       context: .
       args:

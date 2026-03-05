@@ -1,5 +1,8 @@
 # ROS Package [bob_q3tts](https://github.com/bob-ros2/bob_q3tts)
 
+[![Docker Build and Push](https://github.com/bob-ros2/bob_q3tts/actions/workflows/docker-image.yml/badge.svg)](https://github.com/bob-ros2/bob_q3tts/actions/workflows/docker-image.yml)
+[![ROS 2 CI](https://github.com/bob-ros2/bob_q3tts/actions/workflows/ros-ci.yml/badge.svg)](https://github.com/bob-ros2/bob_q3tts/actions/workflows/ros-ci.yml)
+
 A ROS 2 wrapper for the **Qwen3-TTS** model, providing high-fidelity, low-latency text-to-speech with streaming aggregation and voice cloning capabilities. It also includes a Qt-based GUI for real-time parameter tuning.
 
 ## Quick Start
@@ -16,6 +19,13 @@ A ROS 2 wrapper for the **Qwen3-TTS** model, providing high-fidelity, low-latenc
 
 ### Docker Usage
 
+The package is automatically built and pushed to the GitHub Container Registry (GHCR).
+
+#### Using the Pre-built Image
+```bash
+docker pull ghcr.io/bob-ros2/bob-q3tts:latest
+```
+
 #### Using Docker Compose (Recommended)
 ```bash
 docker-compose build
@@ -23,9 +33,9 @@ docker-compose up
 ```
 
 #### Using Docker CLI
-1. **Build the Image**:
+1. **Build the Image** (locally):
    ```bash
-   docker build -t bob_q3tts .
+   docker build -t bob-q3tts .
    ```
 
 2. **Run the Node** (with GPU and Audio):
@@ -35,10 +45,10 @@ docker-compose up
      --device /dev/snd \
      -e Q3TTS_MODEL_DIR=/models \
      -e ROS_DOMAIN_ID=99 \
-     -v  /blue/dev/q3tts/models:/models \
+     -v $(pwd)/models:/models \
      --network host \
      --ipc host \
-     bob-q3tts:latest
+     ghcr.io/bob-ros2/bob-q3tts:latest
    ```
 
 ## Troubleshooting Audio
