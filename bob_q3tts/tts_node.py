@@ -461,7 +461,7 @@ class TTSnode(Node):
                         stream_audio = self.resample_audio(audio_data, sr, 44100)
                         # Float32 -> Int16 conversion (+ scaling)
                         stream_int16 = (stream_audio * 32767).astype(np.int16)
-                        
+
                         audio_msg = Int16MultiArray()
                         audio_msg.data = stream_int16.flatten().tolist()
                         self.audio_pub.publish(audio_msg)
@@ -486,7 +486,8 @@ class TTSnode(Node):
         if player == 'sys':
             # Use Python-native library (sounddevice)
             if self.sd is not None:
-                # 1. Resolve target sample rate (explicit param > inferred working rate > model native)
+                # 1. Resolve target sample rate
+                # (explicit param > inferred working rate > model native)
                 target_sr = self.get_parameter('target_sample_rate').value
                 if target_sr <= 0 and self.inferred_target_sr:
                     target_sr = self.inferred_target_sr
@@ -501,7 +502,9 @@ class TTSnode(Node):
                 except Exception as e:
                     # If auto-resample failed or was invalid, try 48000 (standard for HDMI)
                     if "Invalid sample rate" in str(e) and sr != 48000:
-                        self.get_logger().warn(f"Playback at {sr}Hz failed. Retrying at 48000Hz fallback.")
+                        self.get_logger().warn(
+                            f"Playback at {sr}Hz failed. Retrying at 48000Hz fallback."
+                        )
                         resampled_data = self.resample_audio(audio_data, sr, 48000)
                         try:
                             self._do_native_play(resampled_data, 48000)
@@ -581,7 +584,8 @@ class TTSnode(Node):
 def main(args=None):
 
     parser = argparse.ArgumentParser(
-        description='ROS node that provides an interface to Qwen3-TTS with streaming text aggregation.',
+        description='ROS node that provides an interface to Qwen3-TTS '
+                    'with streaming text aggregation.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '-l', '--list', action="store_true", help='list available audodevices')
