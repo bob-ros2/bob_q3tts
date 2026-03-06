@@ -19,8 +19,6 @@ import tempfile
 import threading
 import time
 
-import numpy as np
-
 from ament_index_python.packages import get_package_share_directory
 from rcl_interfaces.msg import ParameterDescriptor
 from rcl_interfaces.msg import ParameterType
@@ -28,6 +26,8 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Int16MultiArray
 from std_msgs.msg import String
+
+import numpy as np
 
 
 class TTSnode(Node):
