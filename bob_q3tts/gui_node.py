@@ -36,7 +36,7 @@ class GUInode(Node, QMainWindow):
         # Initialize Qt Window
         QMainWindow.__init__(self)
 
-        self.setWindowTitle("Qwen3-TTS Parameter Tuner")
+        self.setWindowTitle('Qwen3-TTS Parameter Tuner')
         self.setMinimumWidth(600)
         self.setMinimumHeight(700)
 
@@ -55,9 +55,9 @@ class GUInode(Node, QMainWindow):
 
         # Header with Refresh Button
         self.header = QHBoxLayout()
-        self.refresh_btn = QPushButton("Sync from Node")
+        self.refresh_btn = QPushButton('Sync from Node')
         self.refresh_btn.clicked.connect(self.sync_parameters)
-        self.header.addWidget(QLabel(f"Target: /{self.target_node}"))
+        self.header.addWidget(QLabel(f'Target: /{self.target_node}'))
         self.header.addStretch()
         self.header.addWidget(self.refresh_btn)
         self.layout.addLayout(self.header)
@@ -73,40 +73,40 @@ class GUInode(Node, QMainWindow):
         # name, type, min, max, scale (for double), default
         self.params = [
             # Area: Generation
-            {"name": "do_sample", "type": "bool", "group": "Generation",
-             "label": "Enable Sampling (Stage 1)"},
-            {"name": "temperature", "type": "double", "min": 0.0, "max": 2.0,
-             "scale": 100, "label": "Temperature", "group": "Generation"},
-            {"name": "top_p", "type": "double", "min": 0.0, "max": 1.0,
-             "scale": 100, "label": "Top-P", "group": "Generation"},
-            {"name": "top_k", "type": "int", "min": 1, "max": 100,
-             "label": "Top-K", "group": "Generation"},
-            {"name": "repetition_penalty", "type": "double", "min": 1.0,
-             "max": 2.0, "scale": 100, "label": "Repetition Penalty",
-             "group": "Generation"},
+            {'name': 'do_sample', 'type': 'bool', 'group': 'Generation',
+             'label': 'Enable Sampling (Stage 1)'},
+            {'name': 'temperature', 'type': 'double', 'min': 0.0, 'max': 2.0,
+             'scale': 100, 'label': 'Temperature', 'group': 'Generation'},
+            {'name': 'top_p', 'type': 'double', 'min': 0.0, 'max': 1.0,
+             'scale': 100, 'label': 'Top-P', 'group': 'Generation'},
+            {'name': 'top_k', 'type': 'int', 'min': 1, 'max': 100,
+             'label': 'Top-K', 'group': 'Generation'},
+            {'name': 'repetition_penalty', 'type': 'double', 'min': 1.0,
+             'max': 2.0, 'scale': 100, 'label': 'Repetition Penalty',
+             'group': 'Generation'},
 
             # Area: Subtalker
-            {"name": "subtalker_dosample", "type": "bool", "group": "Subtalker",
-             "label": "Enable Subtalker Sampling"},
-            {"name": "subtalker_temperature", "type": "double", "min": 0.0,
-             "max": 2.0, "scale": 100, "label": "Subtalker Temp",
-             "group": "Subtalker"},
-            {"name": "subtalker_top_p", "type": "double", "min": 0.0, "max": 1.0,
-             "scale": 100, "label": "Subtalker Top-P", "group": "Subtalker"},
-            {"name": "subtalker_top_k", "type": "int", "min": 1, "max": 100,
-             "label": "Subtalker Top-K", "group": "Subtalker"},
+            {'name': 'subtalker_dosample', 'type': 'bool', 'group': 'Subtalker',
+             'label': 'Enable Subtalker Sampling'},
+            {'name': 'subtalker_temperature', 'type': 'double', 'min': 0.0,
+             'max': 2.0, 'scale': 100, 'label': 'Subtalker Temp',
+             'group': 'Subtalker'},
+            {'name': 'subtalker_top_p', 'type': 'double', 'min': 0.0, 'max': 1.0,
+             'scale': 100, 'label': 'Subtalker Top-P', 'group': 'Subtalker'},
+            {'name': 'subtalker_top_k', 'type': 'int', 'min': 1, 'max': 100,
+             'label': 'Subtalker Top-K', 'group': 'Subtalker'},
 
             # Area: Logic
-            {"name": "flush_timeout", "type": "int", "min": 0, "max": 5000,
-             "label": "Flush Timeout (ms)", "group": "Logic"},
-            {"name": "language", "type": "string", "label": "Language",
-             "group": "Logic"},
-            {"name": "play", "type": "bool", "label": "Real-time Playback",
-             "group": "Logic"},
-            {"name": "audio_device", "type": "string", "label": "Audio Device (ID/Name)",
-             "group": "Logic"},
-            {"name": "target_sample_rate", "type": "int", "min": 0, "max": 96000,
-             "label": "Target SR (0=auto)", "group": "Logic"},
+            {'name': 'flush_timeout', 'type': 'int', 'min': 0, 'max': 5000,
+             'label': 'Flush Timeout (ms)', 'group': 'Logic'},
+            {'name': 'language', 'type': 'string', 'label': 'Language',
+             'group': 'Logic'},
+            {'name': 'play', 'type': 'bool', 'label': 'Real-time Playback',
+             'group': 'Logic'},
+            {'name': 'audio_device', 'type': 'string', 'label': 'Audio Device (ID/Name)',
+             'group': 'Logic'},
+            {'name': 'target_sample_rate', 'type': 'int', 'min': 0, 'max': 96000,
+             'label': 'Target SR (0=auto)', 'group': 'Logic'},
         ]
 
         self.groups = {}
@@ -127,7 +127,7 @@ class GUInode(Node, QMainWindow):
     def setup_parameters(self):
         """Create GUI widgets for each parameter."""
         for p in self.params:
-            group_name = p.get("group", "Other")
+            group_name = p.get('group', 'Other')
             if group_name not in self.groups:
                 box = QGroupBox(group_name)
                 layout = QVBoxLayout()
@@ -140,56 +140,56 @@ class GUInode(Node, QMainWindow):
             h_layout.setContentsMargins(0, 5, 0, 5)
 
             # Increased label width as requested
-            label = QLabel(p["label"])
+            label = QLabel(p['label'])
             label.setFixedWidth(220)
             h_layout.addWidget(label)
 
-            if p["type"] == "bool":
+            if p['type'] == 'bool':
                 widget = QCheckBox()
                 widget.stateChanged.connect(
-                    lambda state, name=p["name"]: self.on_bool_change(name, state)
+                    lambda state, name=p['name']: self.on_bool_change(name, state)
                 )
-            elif p["type"] in ["int", "double"]:
+            elif p['type'] in ['int', 'double']:
                 widget = QSlider(Qt.Horizontal)
-                widget.setMinimum(int(p["min"] * p.get("scale", 1)))
-                widget.setMaximum(int(p["max"] * p.get("scale", 1)))
+                widget.setMinimum(int(p['min'] * p.get('scale', 1)))
+                widget.setMaximum(int(p['max'] * p.get('scale', 1)))
 
-                value_label = QLabel("N/A")
+                value_label = QLabel('N/A')
                 value_label.setFixedWidth(50)
-                self.value_labels[p["name"]] = value_label
+                self.value_labels[p['name']] = value_label
 
-                if p["type"] == "double":
+                if p['type'] == 'double':
                     widget.valueChanged.connect(
-                        lambda val, name=p["name"], sc=p["scale"], lbl=value_label:
+                        lambda val, name=p['name'], sc=p['scale'], lbl=value_label:
                         self.on_double_change(name, val, sc, lbl)
                     )
                 else:
                     widget.valueChanged.connect(
-                        lambda val, name=p["name"], lbl=value_label:
+                        lambda val, name=p['name'], lbl=value_label:
                         self.on_int_change(name, val, lbl)
                     )
 
                 h_layout.addWidget(widget)
                 h_layout.addWidget(value_label)
-            elif p["type"] == "string":
+            elif p['type'] == 'string':
                 widget = QLineEdit()
                 widget.editingFinished.connect(
-                    lambda name=p["name"], w=widget:
+                    lambda name=p['name'], w=widget:
                     self.on_string_change(name, w.text())
                 )
 
             h_layout.addWidget(widget)
             self.groups[group_name].addWidget(container)
-            self.widgets[p["name"]] = widget
+            self.widgets[p['name']] = widget
 
     def sync_parameters(self):
         """Read all current values from the target node."""
         if not self.get_cli.service_is_ready():
-            self.get_logger().warn(f"Service {self.get_cli.srv_name} not ready")
+            self.get_logger().warn(f'Service {self.get_cli.srv_name} not ready')
             return
 
         req = GetParameters.Request()
-        req.names = [p["name"] for p in self.params]
+        req.names = [p['name'] for p in self.params]
 
         future = self.get_cli.call_async(req)
         future.add_done_callback(self.on_sync_response)
@@ -199,34 +199,34 @@ class GUInode(Node, QMainWindow):
         try:
             res = future.result()
             for i, p_val in enumerate(res.values):
-                name = self.params[i]["name"]
-                p_type_name = self.params[i]["type"]
+                name = self.params[i]['name']
+                p_type_name = self.params[i]['type']
                 widget = self.widgets[name]
 
                 # Block signals during sync to avoid feedback loop
                 widget.blockSignals(True)
 
-                if p_type_name == "bool":
+                if p_type_name == 'bool':
                     widget.setChecked(p_val.bool_value)
-                elif p_type_name == "int":
+                elif p_type_name == 'int':
                     val = p_val.integer_value
                     widget.setValue(val)
                     if name in self.value_labels:
                         self.value_labels[name].setText(str(val))
-                elif p_type_name == "double":
+                elif p_type_name == 'double':
                     val = p_val.double_value
-                    scale = next(item["scale"] for item in self.params
-                                 if item["name"] == name)
+                    scale = next(item['scale'] for item in self.params
+                                 if item['name'] == name)
                     widget.setValue(int(val * scale))
                     if name in self.value_labels:
-                        self.value_labels[name].setText(f"{val:.2f}")
-                elif p_type_name == "string":
+                        self.value_labels[name].setText(f'{val:.2f}')
+                elif p_type_name == 'string':
                     widget.setText(p_val.string_value)
 
                 widget.blockSignals(False)
-            self.get_logger().info("Successfully synced parameters from node.")
+            self.get_logger().info('Successfully synced parameters from node.')
         except Exception as e:
-            self.get_logger().error(f"Failed to sync parameters: {e}")
+            self.get_logger().error(f'Failed to sync parameters: {e}')
 
     def on_bool_change(self, name, state):
         """Update a boolean parameter."""
@@ -241,7 +241,7 @@ class GUInode(Node, QMainWindow):
     def on_double_change(self, name, val, scale, label):
         """Update a double parameter and its label."""
         real_val = val / float(scale)
-        label.setText(f"{real_val:.2f}")
+        label.setText(f'{real_val:.2f}')
         self.set_ros_param(name, ParameterType.PARAMETER_DOUBLE, float(real_val))
 
     def on_string_change(self, name, val):
@@ -251,13 +251,12 @@ class GUInode(Node, QMainWindow):
     def set_ros_param(self, name, p_type, val):
         """Send a SetParameters request to the target node."""
         if not self.set_cli.service_is_ready():
-            self.get_logger().warn(f"Service {self.set_cli.srv_name} not ready")
+            self.get_logger().warn(f'Service {self.set_cli.srv_name} not ready')
             return
 
         param = Parameter()
         param.name = name
         p_val = ParameterValue()
-        p_val.type = p_type
         if p_type == ParameterType.PARAMETER_BOOL:
             p_val.bool_value = val
         elif p_type == ParameterType.PARAMETER_INTEGER:
@@ -272,7 +271,7 @@ class GUInode(Node, QMainWindow):
         req = SetParameters.Request()
         req.parameters = [param]
 
-        self.get_logger().info(f"Setting parameter {name} to {val}")
+        self.get_logger().info(f'Setting parameter {name} to {val}')
         self.set_cli.call_async(req)
 
 

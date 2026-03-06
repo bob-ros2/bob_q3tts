@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
 import os
 import queue
 import subprocess
@@ -239,7 +238,7 @@ class TTSnode(Node):
         )
 
         # 2. State & Queues
-        self.text_buffer = ""
+        self.text_buffer = ''
         self.last_text_time = self.get_clock().now()
         self.text_queue = queue.Queue()
         self.audio_queue = queue.Queue()
@@ -270,13 +269,13 @@ class TTSnode(Node):
         self.sd = None
         self.sf = None
         self.torch = None
-        self.get_logger().info("Loading Qwen3-TTS libraries and model...")
+        self.get_logger().info('Loading Qwen3-TTS libraries and model...')
 
         try:
             # Set environment variables before model loading
             model_dir = self.get_parameter('model_dir').value
-            os.environ["HF_HOME"] = model_dir
-            os.environ["HUGGINGFACE_HUB_CACHE"] = model_dir
+            os.environ['HF_HOME'] = model_dir
+            os.environ['HUGGINGFACE_HUB_CACHE'] = model_dir
 
             # Import heavy libraries inside __init__
             import torch
@@ -292,9 +291,9 @@ class TTSnode(Node):
 
             self.model = Qwen3TTSModel.from_pretrained(
                 self.get_parameter('model_id').value,
-                device_map="cuda:0",
+                device_map='cuda:0',
                 dtype=torch.bfloat16,
-                attn_implementation="flash_attention_2",
+                attn_implementation='flash_attention_2',
                 cache_dir=model_dir
             )
 
@@ -304,14 +303,14 @@ class TTSnode(Node):
             if requested_lang.lower() != 'auto':
                 if not any(lang.lower() == requested_lang.lower() for lang in supported_langs):
                     self.get_logger().error(
-                        f"Unsupported language: '{requested_lang}'. Supported: {supported_langs}"
+                        f'Unsupported language: \'{requested_lang}\'. Supported: {supported_langs}'
                     )
                     return
 
-            self.get_logger().info("Model loaded successfully.")
+            self.get_logger().info('Model loaded successfully.')
 
         except Exception as e:
-            self.get_logger().error(f"Failed to initialize TTS node: {e}")
+            self.get_logger().error(f'Failed to initialize TTS node: {e}')
             return
 
         self.tts_thread = threading.Thread(target=self.tts_loop, daemon=True)
@@ -323,7 +322,7 @@ class TTSnode(Node):
         # Timer to flush buffer
         self.flush_timer = self.create_timer(0.1, self.flush_timer_callback)
 
-        self.get_logger().info("TTS Node ready and listening on topic 'text'.")
+        self.get_logger().info('TTS Node ready and listening on topic \'text\'.')
 
     def _get_sf(self):
         """Lazy load soundfile library."""
@@ -332,7 +331,7 @@ class TTSnode(Node):
                 import soundfile as sf
                 self.sf = sf
             except ImportError as e:
-                self.get_logger().error(f"Failed to import soundfile: {e}")
+                self.get_logger().error(f'Failed to import soundfile: {e}')
                 raise e
         return self.sf
 
@@ -348,9 +347,9 @@ class TTSnode(Node):
                 if char in delimiters:
                     sentence = self.text_buffer.strip()
                     if sentence:
-                        self.get_logger().info(f"Aggregated sentence: '{sentence}'")
+                        self.get_logger().info(f'Aggregated sentence: \'{sentence}\'')
                         self.text_queue.put(sentence)
-                    self.text_buffer = ""
+                    self.text_buffer = ''
 
     def flush_timer_callback(self):
         """Flush the text buffer if the timeout has passed."""
@@ -367,9 +366,9 @@ class TTSnode(Node):
             if diff > timeout_ms:
                 sentence = self.text_buffer.strip()
                 if sentence:
-                    self.get_logger().info(f"Flushing buffer due to timeout: '{sentence}'")
+                    self.get_logger().info(f'Flushing buffer due to timeout: \'{sentence}\'')
                     self.text_queue.put(sentence)
-                self.text_buffer = ""
+                self.text_buffer = ''
 
     def tts_loop(self):
         """Process the text queue and generate audio."""
@@ -391,10 +390,10 @@ class TTSnode(Node):
                             with open(ref_text, 'r') as f:
                                 ref_text = f.read().strip()
                     except Exception as e:
-                        self.get_logger().error(f"Failed to read ref_text {ref_text_param}: {e}")
-                        ref_text = ""
+                        self.get_logger().error(f'Failed to read ref_text {ref_text_param}: {e}')
+                        ref_text = ''
 
-                self.get_logger().info(f"Generating audio for: '{text}' (Language: {language})")
+                self.get_logger().info(f'Generating audio for: \'{text}\' (Language: {language})')
                 start_time = time.time()
 
                 # Build voice clone prompt mode
@@ -420,7 +419,7 @@ class TTSnode(Node):
                 )
 
                 latency = time.time() - start_time
-                self.get_logger().info(f"Generated audio in {latency:.2f}s")
+                self.get_logger().info(f'Generated audio in {latency:.2f}s')
 
                 # Push to audio queue (with text for feedback)
                 self.audio_queue.put((wavs[0], sr, text))
@@ -434,7 +433,7 @@ class TTSnode(Node):
             except queue.Empty:
                 continue
             except Exception as e:
-                self.get_logger().error(f"Error in TTS loop: {e}")
+                self.get_logger().error(f'Error in TTS loop: {e}')
 
     def audio_loop(self):
         """Consume the audio queue for playback and storage."""
@@ -445,16 +444,16 @@ class TTSnode(Node):
                 # 1. Save to file if prefix is provided
                 file_prefix = self.get_parameter('file_prefix').value
                 if file_prefix:
-                    filename = f"{file_prefix}_{self.file_index:05d}.wav"
+                    filename = f'{file_prefix}_{self.file_index:05d}.wav'
                     self._get_sf().write(filename, audio_data, sr)
-                    self.get_logger().info(f"Saved audio to {filename}")
+                    self.get_logger().info(f'Saved audio to {filename}')
                     self.file_index += 1
 
                 # 2. Publish text before starting playback
                 msg = String()
                 msg.data = spoken_text
                 self.pub.publish(msg)
-                self.get_logger().info(f"Speaking: '{spoken_text}'")
+                self.get_logger().info(f'Speaking: \'{spoken_text}\'')
 
                 # 3. Stream raw audio if subscribed (Bridge for streamer)
                 if self.audio_pub.get_subscription_count() > 0:
@@ -468,7 +467,7 @@ class TTSnode(Node):
                         audio_msg.data = stream_int16.flatten().tolist()
                         self.audio_pub.publish(audio_msg)
                     except Exception as e:
-                        self.get_logger().error(f"Failed to stream raw audio: {e}")
+                        self.get_logger().error(f'Failed to stream raw audio: {e}')
 
                 # 4. Play if enabled
                 if self.get_parameter('play').value:
@@ -479,7 +478,7 @@ class TTSnode(Node):
             except queue.Empty:
                 continue
             except Exception as e:
-                self.get_logger().error(f"Error in audio loop: {e}")
+                self.get_logger().error(f'Error in audio loop: {e}')
 
     def play_audio(self, audio_data, sr):
         """Play audio using native library or configured executable."""
@@ -503,24 +502,24 @@ class TTSnode(Node):
                     self._do_native_play(audio_data, sr)
                 except Exception as e:
                     # If auto-resample failed or was invalid, try 48000 (standard for HDMI)
-                    if "Invalid sample rate" in str(e) and sr != 48000:
+                    if 'Invalid sample rate' in str(e) and sr != 48000:
                         self.get_logger().warn(
-                            f"Playback at {sr}Hz failed. Retrying at 48000Hz fallback."
+                            f'Playback at {sr}Hz failed. Retrying at 48000Hz fallback.'
                         )
                         resampled_data = self.resample_audio(audio_data, sr, 48000)
                         try:
                             self._do_native_play(resampled_data, 48000)
                             # If fallback succeeded, remember this for next time
                             self.inferred_target_sr = 48000
-                            self.get_logger().info("Sticky sample rate set to 48000Hz.")
+                            self.get_logger().info('Sticky sample rate set to 48000Hz.')
                             return
                         except Exception as e2:
-                            self.get_logger().error(f"Retry at 48000Hz failed: {e2}")
+                            self.get_logger().error(f'Retry at 48000Hz failed: {e2}')
 
-                    self.get_logger().warn(f"Native playback failed: {e}. Falling back to aplay.")
+                    self.get_logger().warn(f'Native playback failed: {e}. Falling back to aplay.')
                     self._play_with_executable('aplay', audio_data, sr)
             else:
-                self.get_logger().warn("sounddevice not installed. Falling back to aplay.")
+                self.get_logger().warn('sounddevice not installed. Falling back to aplay.')
                 self._play_with_executable('aplay', audio_data, sr)
         else:
             # Use configured external player
@@ -545,7 +544,7 @@ class TTSnode(Node):
             import librosa
             return librosa.resample(audio_data, orig_sr=orig_sr, target_sr=target_sr)
         except ImportError:
-            self.get_logger().warn("librosa not installed. Using simple numpy interpolation.")
+            self.get_logger().warn('librosa not installed. Using simple numpy interpolation.')
             duration = len(audio_data) / orig_sr
             num_samples = int(duration * target_sr)
             return np.interp(
@@ -573,24 +572,25 @@ class TTSnode(Node):
                 stderr=subprocess.DEVNULL
             )
         except Exception as e:
-            self.get_logger().error(f"Playback with {executable} failed: {e}")
+            self.get_logger().error(f'Playback with {executable} failed: {e}')
         finally:
             # Clean up the temporary file
             if temp_file_path and os.path.exists(temp_file_path):
                 try:
                     os.remove(temp_file_path)
                 except Exception as e:
-                    self.get_logger().warn(f"Failed to remove temp file {temp_file_path}: {e}")
+                    self.get_logger().warn(f'Failed to remove temp file {temp_file_path}: {e}')
 
 
 def main(args=None):
     """Start the TTS node."""
+    import argparse
     parser = argparse.ArgumentParser(
         description='ROS node that provides an interface to Qwen3-TTS '
                     'with streaming text aggregation.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '-l', '--list', action="store_true", help='list available audodevices')
+        '-l', '--list', action='store_true', help='list available audodevices')
     parsed, remaining = parser.parse_known_args()
 
     if parsed.list:
@@ -603,7 +603,7 @@ def main(args=None):
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        node.get_logger().info("Shutting down node...")
+        node.get_logger().info('Shutting down node...')
     finally:
         node.destroy_node()
         if rclpy.ok():
