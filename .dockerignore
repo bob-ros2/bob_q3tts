@@ -12,6 +12,7 @@ __pycache__/
 models/
 *.wav
 *.txt
+!CMakeLists.txt
 !requirements.txt
 !voice_ref_text.txt
 !config/voice_ref_text.txt
