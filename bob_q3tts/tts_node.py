@@ -20,14 +20,13 @@ import threading
 import time
 
 from ament_index_python.packages import get_package_share_directory
+import numpy as np
 from rcl_interfaces.msg import ParameterDescriptor
 from rcl_interfaces.msg import ParameterType
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Int16MultiArray
 from std_msgs.msg import String
-
-import numpy as np
 
 
 class TTSnode(Node):
