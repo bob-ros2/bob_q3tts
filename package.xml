@@ -14,9 +14,7 @@
   <author email="bobmeuchelm@gmail.com">Bob Ros</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>ament_cmake_core</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
-  <buildtool_depend>ament_cmake_test</buildtool_depend>
 
   <depend>rclpy</depend>
   <depend>std_msgs</depend>
