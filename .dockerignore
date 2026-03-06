@@ -1,6 +1,9 @@
+# ROS 2 build artifacts
 build/
 install/
 log/
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -9,13 +12,12 @@ __pycache__/
 .tox/
 .coverage
 .cache/
+
+# Models & Media (prevent large files in image)
 models/
 *.wav
-*.txt
-!CMakeLists.txt
-!requirements.txt
-!voice_ref_text.txt
-!config/voice_ref_text.txt
+
+# IDE / Project
 .git/
 .github/
 .vscode/
