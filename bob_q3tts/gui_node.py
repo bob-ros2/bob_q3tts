@@ -18,7 +18,7 @@ import threading
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication, QCheckBox, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QScrollArea, QSlider, QVBoxLayout, QWidget, QPushButton
+    QMainWindow, QPushButton, QScrollArea, QSlider, QVBoxLayout, QWidget
 )
 from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
 from rcl_interfaces.srv import GetParameters, SetParameters

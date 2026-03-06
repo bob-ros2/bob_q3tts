@@ -303,7 +303,7 @@ class TTSnode(Node):
             if requested_lang.lower() != 'auto':
                 if not any(lang.lower() == requested_lang.lower() for lang in supported_langs):
                     self.get_logger().error(
-                        f'Unsupported language: \'{requested_lang}\'. Supported: {supported_langs}'
+                        f"Unsupported language: '{requested_lang}'. Supported: {supported_langs}"
                     )
                     return
 
@@ -322,7 +322,7 @@ class TTSnode(Node):
         # Timer to flush buffer
         self.flush_timer = self.create_timer(0.1, self.flush_timer_callback)
 
-        self.get_logger().info('TTS Node ready and listening on topic \'text\'.')
+        self.get_logger().info("TTS Node ready and listening on topic 'text'.")
 
     def _get_sf(self):
         """Lazy load soundfile library."""
@@ -347,7 +347,7 @@ class TTSnode(Node):
                 if char in delimiters:
                     sentence = self.text_buffer.strip()
                     if sentence:
-                        self.get_logger().info(f'Aggregated sentence: \'{sentence}\'')
+                        self.get_logger().info(f"Aggregated sentence: '{sentence}'")
                         self.text_queue.put(sentence)
                     self.text_buffer = ''
 
@@ -366,7 +366,7 @@ class TTSnode(Node):
             if diff > timeout_ms:
                 sentence = self.text_buffer.strip()
                 if sentence:
-                    self.get_logger().info(f'Flushing buffer due to timeout: \'{sentence}\'')
+                    self.get_logger().info(f"Flushing buffer due to timeout: '{sentence}'")
                     self.text_queue.put(sentence)
                 self.text_buffer = ''
 
@@ -393,7 +393,7 @@ class TTSnode(Node):
                         self.get_logger().error(f'Failed to read ref_text {ref_text_param}: {e}')
                         ref_text = ''
 
-                self.get_logger().info(f'Generating audio for: \'{text}\' (Language: {language})')
+                self.get_logger().info(f"Generating audio for: '{text}' (Language: {language})")
                 start_time = time.time()
 
                 # Build voice clone prompt mode
@@ -453,7 +453,7 @@ class TTSnode(Node):
                 msg = String()
                 msg.data = spoken_text
                 self.pub.publish(msg)
-                self.get_logger().info(f'Speaking: \'{spoken_text}\'')
+                self.get_logger().info(f"Speaking: '{spoken_text}'")
 
                 # 3. Stream raw audio if subscribed (Bridge for streamer)
                 if self.audio_pub.get_subscription_count() > 0:
