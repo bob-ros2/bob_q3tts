@@ -86,7 +86,7 @@ RUN echo "pcm.!default {\n    type pulse\n    fallback \"sysdefault\"\n}\n\nctl.
 # Environment variables for execution
 ENV HOME=/home/${USERNAME}
 ENV PATH=${HOME}/.local/bin:${PATH}
-ENV PYTHONPATH=${HOME}/.local/lib/python3.10/site-packages:${PYTHONPATH}
+ENV PYTHONPATH=${HOME}/.local/lib/python3.10/site-packages
 ENV ROS_HOME=/tmp/ros
 ENV ROS_LOG_DIR=/tmp/ros/log
 
