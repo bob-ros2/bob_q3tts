@@ -1,0 +1,22 @@
+build/
+install/
+log/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.tox/
+.coverage
+.cache/
+models/
+*.wav
+*.txt
+!voice_ref_text.txt
+!config/voice_ref_text.txt
+.git/
+.github/
+.vscode/
+.idea/
+.DS_Store
+ Broadway
