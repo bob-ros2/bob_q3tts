@@ -109,4 +109,3 @@ WORKDIR /app/ros2_ws
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["ros2", "run", "bob_q3tts", "tts"]
-Broadway
