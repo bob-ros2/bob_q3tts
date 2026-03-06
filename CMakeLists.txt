@@ -3,7 +3,9 @@ project(bob_q3tts)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_core REQUIRED)
 find_package(ament_cmake_python REQUIRED)
+find_package(ament_cmake_test REQUIRED)
 find_package(rclpy REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rcl_interfaces REQUIRED)
