@@ -28,9 +28,7 @@ ENV PATH=${CUDA_HOME}/bin:${PATH}
 
 # Install Python dependencies into a local path
 COPY requirements.txt .
-# Note: we install to /root/.local to copy later
-RUN pip3 install --no-cache-dir --user torch && \
-    pip3 install --no-cache-dir --user -r requirements.txt
+RUN pip3 install --no-cache-dir --user torch -r requirements.txt
 
 # Build ROS 2 workspace
 COPY . ros2_ws/src/bob_q3tts/
@@ -57,15 +55,16 @@ RUN apt-get update && apt-get install -y \
     sox \
     libasound2-plugins \
     libsox-fmt-all \
-    wget \
-    gnupg2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install ONLY CUDA runtime libs (much smaller than full toolkit)
-RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
+# Install ONLY minimal CUDA runtime (torch brings its own libs, so we only need the bare essentials)
+RUN apt-get update && apt-get install -y wget gnupg2 && \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.1-1_all.deb && \
     dpkg -i cuda-keyring_1.1-1_all.deb && \
     apt-get update && \
-    apt-get install -y cuda-libraries-12-1 cuda-cudart-12-1 && \
+    apt-get install -y cuda-cudart-12-1 && \
+    apt-get purge -y wget gnupg2 && \
+    apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
 # Create user with matching host UID/GID
@@ -73,12 +72,10 @@ RUN groupadd -g ${USER_GID} ${USERNAME} 2>/dev/null || true && \
     useradd -m -u ${USER_UID} -g ${USER_GID} -s /bin/bash ${USERNAME} 2>/dev/null || true && \
     usermod -aG audio,video ${USERNAME}
 
-# Copy built Python packages and ROS installation from builder
-COPY --from=builder /root/.local /home/${USERNAME}/.local
-COPY --from=builder /app/ros2_ws/install /app/ros2_ws/install
-
-# Fix ownership
-RUN chown -R ${USERNAME}:${USERNAME} /app /home/${USERNAME}/.local
+# Copy built Python packages and ROS installation from builder with correct ownership
+# This avoids the extra layer size from a separate 'chown -R' command
+COPY --from=builder --chown=${USERNAME}:${USERNAME} /root/.local /home/${USERNAME}/.local
+COPY --from=builder --chown=${USERNAME}:${USERNAME} /app/ros2_ws/install /app/ros2_ws/install
 
 # ALSA configuration for PulseAudio
 RUN echo "pcm.!default {\n    type pulse\n    fallback \"sysdefault\"\n}\n\nctl.!default {\n    type pulse\n    fallback \"sysdefault\"\n}" > /etc/asound.conf
