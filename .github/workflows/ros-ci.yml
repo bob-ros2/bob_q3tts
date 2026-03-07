@@ -1,21 +1,5 @@
 name: ROS 2 CI
 
-# ==============================================================================
-# HINWEIS ZUM SELF-HOSTED RUNNER:
-# ==============================================================================
-# Dieser Workflow nutzt primär deinen lokalen Server (self-hosted).
-#
-# WENN DER RUNNER NICHT LÄUFT:
-# Die CI-Action bleibt im Status 'Queued' hängen und wartet auf deinen Server.
-#
-# SO SCHALTEST DU IHN AN:
-# Gehe auf deinem Server in den Ordner: /blue/dev/q3tts/gitrunner
-# Führe aus: docker compose up -d
-#
-# SO SCHALTEST DU ZURÜCK AUF GITHUB-CLOUD (FALLS DEIN SERVER OFFLINE BLEIBT):
-# Ändere unten bei 'runs-on:' den Wert von [self-hosted] zurück auf [ubuntu-latest].
-# ==============================================================================
-
 on:
   push:
     branches: [ "main" ]
@@ -28,8 +12,7 @@ env:
 
 jobs:
   test:
-    # Hier wird dein lokaler Runner ausgewählt. Ohne lokale Instanz passiert hier nichts!
-    runs-on: self-hosted
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
