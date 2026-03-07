@@ -29,9 +29,7 @@ ENV PATH=${CUDA_HOME}/bin:${PATH}
 # Install Python dependencies into a local path
 COPY requirements.txt .
 # Note: we install to /root/.local to copy later
-# Install Python dependencies using pre-compiled wheels for speed
-RUN pip3 install --no-cache-dir --user torch==2.4.0 --index-url https://download.pytorch.org/whl/cu121 && \
-    pip3 install --no-cache-dir --user https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu121torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl && \
+RUN pip3 install --no-cache-dir --user torch && \
     pip3 install --no-cache-dir --user -r requirements.txt
 
 # Build ROS 2 workspace
