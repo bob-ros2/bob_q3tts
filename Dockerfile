@@ -28,7 +28,8 @@ ENV PATH=${CUDA_HOME}/bin:${PATH}
 
 # Install Python dependencies into a local path
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir --user torch -r requirements.txt
+RUN pip3 install --no-cache-dir --user torch && \
+    pip3 install --no-cache-dir --user -r requirements.txt
 
 # Build ROS 2 workspace
 COPY . ros2_ws/src/bob_q3tts/
