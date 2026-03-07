@@ -69,9 +69,7 @@ class TTSnode(Node):
         )
         self.declare_parameter(
             'sentence_delimiters',
-            os.environ.get('Q3TTS_SENTENCE_DELIMITERS', ',.:;!?').split(',')
-            if 'Q3TTS_SENTENCE_DELIMITERS' in os.environ
-            else [',', '.', ':', ';', '!', '?'],
+            list(os.environ.get('Q3TTS_SENTENCE_DELIMITERS', ',.:;!?')),
             ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING_ARRAY,
                 description='Delimiters that trigger sentence aggregation.'
