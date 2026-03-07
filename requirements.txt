@@ -1,6 +1,4 @@
 qwen-tts
 soundfile
-torch
-flash-attn
 sounddevice
 PyQt5
