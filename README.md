@@ -51,24 +51,6 @@ docker-compose up
      ghcr.io/bob-ros2/bob-q3tts:latest
    ```
 
-## Troubleshooting Audio
-
-If you hear no sound or see "Invalid sample rate" errors (common with HDMI/GPU audio):
-
-1. **List Devices** (inside container):
-   ```bash
-   python3 -c "import sounddevice as sd; print(sd.query_devices())"
-   ```
-2. **Set Device**: Find the index or name (e.g., `HDA NVidia: HDMI 0 (hw:2,3)`) and set the `audio_device` parameter.
-3. **Force Resampling**: If your hardware only supports 48kHz, set `target_sample_rate` to `48000`.
-
-Example:
-```bash
-ros2 param set /tts audio_device "HDA NVidia: HDMI 0 (hw:2,3)"
-ros2 param set /tts target_sample_rate 48000
-```
-
-## ROS API
 
 ### Topics
 
@@ -121,5 +103,29 @@ The node uses static configuration for initialization and dynamic parameters for
 | `play` | `bool` | Enable/disable audio playback. Env: `Q3TTS_PLAY` (Default: `true`) |
 | `player` | `string` | Player: `sys` (native) or executable path. Env: `Q3TTS_PLAYER` (Default: `sys`) |
 | `audio_device` | `string` | Device ID or name for sounddevice. Env: `Q3TTS_AUDIO_DEVICE` (Default: `""`) |
+| `target_sample_rate` | `integer` | Force resampling for local playback (0 = auto). Env: `Q3TTS_TARGET_SAMPLE_RATE` (Default: `0`) |
 | `file_prefix` | `string` | Prefix for saving audio files. Env: `Q3TTS_FILE_PREFIX` (Default: `""`) |
 | `file_start_index` | `integer` | Starting index for file naming. Env: `Q3TTS_FILE_START_INDEX` (Default: `1`) |
+
+## Audio Architecture & Sample Rates
+
+The node handles different sample rates for local playback and remote streaming:
+
+- **Local Playback (`target_sample_rate` = 0)**: 
+  - The model generates audio at **24,000 Hz**.
+  - If the soundcard (e.g., HDMI) doesn't support 24kHz, the node automatically falls back to **48,000 Hz** resampling.
+  - This fallback becomes "sticky" (remembered) to ensure zero-latency for subsequent sentences.
+- **Remote Streaming (`audio_raw` topic)**:
+  - Audio published to the ROS topic is **always fixed at 44,100 Hz**.
+  - This ensure compatibility with standard streaming tools and bridges (like Twitch bots) that expect a constant frequency.
+
+## Troubleshooting Audio
+
+If you hear no sound or see "Invalid sample rate" errors (common with HDMI/GPU audio):
+
+1. **List Devices** (inside container):
+   ```bash
+   python3 -c "import sounddevice as sd; print(sd.query_devices())"
+   ```
+2. **Set Device**: Find the index or name (e.g., `HDA NVidia: HDMI 0 (hw:2,3)`) and set the `audio_device` parameter.
+3. **Automatic Handling**: By default (`target_sample_rate: 0`), the node will try to auto-detect a working rate (falling back to 48kHz). You only need to manually set `target_sample_rate` if the auto-detection fails or you have very specific hardware needs.
