@@ -1,6 +1,21 @@
-qwen-tts
-soundfile
-torch
-flash-attn
-sounddevice
-PyQt5
+# --- AI & Deep Learning Core ---
+# Torch will also be installed separately in the Dockerfile to ensure correct CUDA indexing.
+torch>=2.4.0
+
+# Qwen-TTS specific logic
+qwen-tts>=0.1.0
+
+# Fast Attention Kernels (Warning: Compilation takes a long time during the first build!)
+# Version 2.6.x is stable for Hopper/Ada/Ampere GPUs.
+flash-attn>=2.6.3
+
+# --- Audio Engine ---
+# For reading and writing WAV files (libsndfile frontend)
+soundfile>=0.12.1
+
+# For native audio playback (provides ALSA connection for Bobs voice)
+sounddevice>=0.4.6
+
+# --- GUI & System ---
+# The dashboard for real-time parameter configuration
+PyQt5>=5.15.10

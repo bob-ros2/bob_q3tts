@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import signal
 import sys
-import threading
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
-    QApplication, QCheckBox, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QPushButton, QScrollArea, QSlider, QVBoxLayout, QWidget
+    QApplication, QCheckBox, QFileDialog, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
+    QMainWindow, QPushButton, QScrollArea, QSlider, QVBoxLayout, QWidget, QGridLayout
 )
 from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
 from rcl_interfaces.srv import GetParameters, SetParameters
@@ -37,8 +37,8 @@ class GUInode(Node, QMainWindow):
         QMainWindow.__init__(self)
 
         self.setWindowTitle('Qwen3-TTS Parameter Tuner')
-        self.setMinimumWidth(600)
-        self.setMinimumHeight(700)
+        self.setMinimumWidth(1000)
+        self.setMinimumHeight(850)
 
         self.target_node = 'tts'
         self.set_cli = self.create_client(
@@ -51,7 +51,7 @@ class GUInode(Node, QMainWindow):
         # Setup UI
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.layout = QVBoxLayout(self.central_widget)
+        self.main_layout = QVBoxLayout(self.central_widget)
 
         # Header with Refresh Button
         self.header = QHBoxLayout()
@@ -60,17 +60,16 @@ class GUInode(Node, QMainWindow):
         self.header.addWidget(QLabel(f'Target: /{self.target_node}'))
         self.header.addStretch()
         self.header.addWidget(self.refresh_btn)
-        self.layout.addLayout(self.header)
+        self.main_layout.addLayout(self.header)
 
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.content_widget = QWidget()
         self.content_layout = QVBoxLayout(self.content_widget)
         self.scroll.setWidget(self.content_widget)
-        self.layout.addWidget(self.scroll)
+        self.main_layout.addWidget(self.scroll)
 
         # Parameter definitions
-        # name, type, min, max, scale (for double), default
         self.params = [
             # Area: Generation
             {'name': 'do_sample', 'type': 'bool', 'group': 'Generation',
@@ -96,17 +95,31 @@ class GUInode(Node, QMainWindow):
             {'name': 'subtalker_top_k', 'type': 'int', 'min': 1, 'max': 100,
              'label': 'Subtalker Top-K', 'group': 'Subtalker'},
 
-            # Area: Logic
-            {'name': 'flush_timeout', 'type': 'int', 'min': 0, 'max': 5000,
-             'label': 'Flush Timeout (ms)', 'group': 'Logic'},
-            {'name': 'language', 'type': 'string', 'label': 'Language',
-             'group': 'Logic'},
-            {'name': 'play', 'type': 'bool', 'label': 'Real-time Playback',
-             'group': 'Logic'},
+            # Area: Voice Clone / ICL
+            {'name': 'control_instructions', 'type': 'string', 'label': 'Control Instructions',
+             'group': 'Voice Clone / ICL'},
+            {'name': 'voice_ref_audio', 'type': 'string', 'label': 'Voice Ref Audio (.wav)',
+             'group': 'Voice Clone / ICL', 'browse': True},
+            {'name': 'voice_ref_text', 'type': 'string', 'label': 'Voice Ref Text (ICL)',
+             'group': 'Voice Clone / ICL'},
+
+            # Area: Output & Storage
+            {'name': 'play', 'type': 'bool', 'label': 'Enable Playback',
+             'group': 'Output & Storage'},
+            {'name': 'player', 'type': 'string', 'label': 'Player (aplay/sys)',
+             'group': 'Output & Storage'},
             {'name': 'audio_device', 'type': 'string', 'label': 'Audio Device (ID/Name)',
-             'group': 'Logic'},
+             'group': 'Output & Storage'},
             {'name': 'target_sample_rate', 'type': 'int', 'min': 0, 'max': 96000,
-             'label': 'Target SR (0=auto)', 'group': 'Logic'},
+             'label': 'Target SR (0=auto)', 'group': 'Output & Storage'},
+            {'name': 'file_prefix', 'type': 'string', 'label': 'File Save Prefix',
+             'group': 'Output & Storage'},
+
+            # Area: Pipeline Logic
+            {'name': 'flush_timeout', 'type': 'int', 'min': 0, 'max': 5000,
+             'label': 'Flush Timeout (ms)', 'group': 'Pipeline Logic'},
+            {'name': 'language', 'type': 'string', 'label': 'Language (e.g. auto, de)',
+             'group': 'Pipeline Logic'},
         ]
 
         self.groups = {}
@@ -115,47 +128,55 @@ class GUInode(Node, QMainWindow):
 
         self.setup_parameters()
 
-        # Initial Sync
-        self.create_timer(1.0, self.initial_sync_timer)
+        # Timer for ROS 2 spin_once (20 Hz)
+        self.ros_timer = QTimer()
+        self.ros_timer.timeout.connect(self.ros_loop)
+        self.ros_timer.start(50)
 
-    def initial_sync_timer(self):
-        """Try to sync once the services are available."""
-        if self.get_cli.service_is_ready():
-            self.sync_parameters()
-            self.destroy_timer(self.initial_sync_timer)
+        # Initial Sync
+        QTimer.singleShot(1000, self.sync_parameters)
+
+    def ros_loop(self):
+        """Perform ROS 2 spinning in the main Qt thread."""
+        if rclpy.ok():
+            try:
+                rclpy.spin_once(self, timeout_sec=0)
+            except Exception:
+                pass
 
     def setup_parameters(self):
-        """Create GUI widgets for each parameter."""
+        """Create GUI widgets for each parameter using a Grid Layout for flexibility."""
         for p in self.params:
             group_name = p.get('group', 'Other')
             if group_name not in self.groups:
                 box = QGroupBox(group_name)
-                layout = QVBoxLayout()
-                box.setLayout(layout)
+                # Using GridLayout for better alignment and resizability
+                grid = QGridLayout()
+                grid.setColumnStretch(1, 1)  # Slider/Input column is flexible
+                box.setLayout(grid)
                 self.content_layout.addWidget(box)
-                self.groups[group_name] = layout
+                self.groups[group_name] = [grid, 0]  # Store layout and next row index
 
-            container = QWidget()
-            h_layout = QHBoxLayout(container)
-            h_layout.setContentsMargins(0, 5, 0, 5)
+            layout, row = self.groups[group_name]
 
-            # Increased label width as requested
+            # Label (fixed width to prevent cutoff)
             label = QLabel(p['label'])
-            label.setFixedWidth(220)
-            h_layout.addWidget(label)
+            label.setFixedWidth(280)
+            layout.addWidget(label, row, 0)
 
             if p['type'] == 'bool':
                 widget = QCheckBox()
                 widget.stateChanged.connect(
                     lambda state, name=p['name']: self.on_bool_change(name, state)
                 )
+                layout.addWidget(widget, row, 1)
             elif p['type'] in ['int', 'double']:
                 widget = QSlider(Qt.Horizontal)
                 widget.setMinimum(int(p['min'] * p.get('scale', 1)))
                 widget.setMaximum(int(p['max'] * p.get('scale', 1)))
 
                 value_label = QLabel('N/A')
-                value_label.setFixedWidth(50)
+                value_label.setFixedWidth(60)
                 self.value_labels[p['name']] = value_label
 
                 if p['type'] == 'double':
@@ -169,8 +190,8 @@ class GUInode(Node, QMainWindow):
                         self.on_int_change(name, val, lbl)
                     )
 
-                h_layout.addWidget(widget)
-                h_layout.addWidget(value_label)
+                layout.addWidget(widget, row, 1)
+                layout.addWidget(value_label, row, 2)
             elif p['type'] == 'string':
                 widget = QLineEdit()
                 widget.editingFinished.connect(
@@ -178,14 +199,40 @@ class GUInode(Node, QMainWindow):
                     self.on_string_change(name, w.text())
                 )
 
-            h_layout.addWidget(widget)
-            self.groups[group_name].addWidget(container)
+                if p.get('browse'):
+                    container = QWidget()
+                    h_layout = QHBoxLayout(container)
+                    h_layout.setContentsMargins(0, 0, 0, 0)
+                    h_layout.addWidget(widget)
+
+                    browse_btn = QPushButton('...')
+                    browse_btn.setFixedWidth(40)
+                    browse_btn.clicked.connect(
+                        lambda checked, w=widget, name=p['name']:
+                        self.browse_file(w, name)
+                    )
+                    h_layout.addWidget(browse_btn)
+                    layout.addWidget(container, row, 1)
+                else:
+                    layout.addWidget(widget, row, 1)
+
             self.widgets[p['name']] = widget
+            self.groups[group_name][1] += 1  # Increment row counter
+
+    def browse_file(self, line_edit, param_name):
+        """Open a file dialog to select a WAV file."""
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Select Reference Audio", "",
+            "Audio Files (*.wav);;All Files (*)", options=options
+        )
+        if file_path:
+            line_edit.setText(file_path)
+            self.on_string_change(param_name, file_path)
 
     def sync_parameters(self):
         """Read all current values from the target node."""
         if not self.get_cli.service_is_ready():
-            self.get_logger().warn(f'Service {self.get_cli.srv_name} not ready')
             return
 
         req = GetParameters.Request()
@@ -251,7 +298,6 @@ class GUInode(Node, QMainWindow):
     def set_ros_param(self, name, p_type, val):
         """Send a SetParameters request to the target node."""
         if not self.set_cli.service_is_ready():
-            self.get_logger().warn(f'Service {self.set_cli.srv_name} not ready')
             return
 
         param = Parameter()
@@ -270,22 +316,18 @@ class GUInode(Node, QMainWindow):
 
         req = SetParameters.Request()
         req.parameters = [param]
-
-        self.get_logger().info(f'Setting parameter {name} to {val}')
         self.set_cli.call_async(req)
 
 
 def main(args=None):
     """Start the GUI node."""
+    # Ensure Ctrl+C terminates the application immediately
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     rclpy.init(args=args)
 
     app = QApplication(sys.argv)
     node = GUInode()
-
-    # Spin ROS in a background thread
-    ros_thread = threading.Thread(target=lambda: rclpy.spin(node), daemon=True)
-    ros_thread.start()
-
     node.show()
 
     try:
