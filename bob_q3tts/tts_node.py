@@ -14,6 +14,7 @@
 
 import os
 import queue
+import re
 import subprocess
 import tempfile
 import threading
@@ -69,10 +70,11 @@ class TTSnode(Node):
         )
         self.declare_parameter(
             'sentence_delimiters',
-            list(os.environ.get('Q3TTS_SENTENCE_DELIMITERS', ',.:;!?')),
+            list(os.environ.get('Q3TTS_SENTENCE_DELIMITERS', ',.!?')),
             ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING_ARRAY,
-                description='Delimiters that trigger sentence aggregation.'
+                description=('Delimiters that trigger sentence aggregation. '
+                             'Empty [] disables splitting (helps maintain voice).')
             )
         )
         self.declare_parameter(
@@ -162,6 +164,15 @@ class TTSnode(Node):
 
         # 1. ROS Parameters - Voice Clone / ICL
         self.declare_parameter(
+            'control_instructions',
+            os.environ.get('Q3TTS_CONTROL_INSTRUCTIONS', ''),
+            ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING,
+                description='Instructions to dynamically shape voice (bypasses voice cloning).'
+            )
+        )
+
+        self.declare_parameter(
             'voice_ref_audio',
             os.environ.get(
                 'Q3TTS_VOICE_REF_AUDIO',
@@ -240,6 +251,14 @@ class TTSnode(Node):
         self.text_queue = queue.Queue()
         self.audio_queue = queue.Queue()
         self.lock = threading.Lock()
+        self.declare_parameter(
+            'substitute',
+            [''],
+            ParameterDescriptor(
+                type=ParameterType.PARAMETER_STRING_ARRAY,
+                description='Array of [regex, replacement] pairs for text cleaning.'
+            )
+        )
         self.file_index = self.get_parameter('file_start_index').value
         self.inferred_target_sr = None
 
@@ -339,14 +358,41 @@ class TTSnode(Node):
 
         with self.lock:
             self.last_text_time = self.get_clock().now()
-            for char in input_text:
-                self.text_buffer += char
-                if char in delimiters:
-                    sentence = self.text_buffer.strip()
+            self.text_buffer += input_text
+
+            # Bypass aggregation completely if delimiters list is empty
+            if not delimiters or (len(delimiters) == 1 and delimiters[0] == ""):
+                # If we have something like [""], it will be handled by flush_timeout
+                return
+
+            # Process buffer for any of the delimiters
+            while True:
+                earliest_idx = -1
+                matched_delim = None
+
+                for d in delimiters:
+                    if not d:
+                        continue
+                    idx = self.text_buffer.find(d)
+                    if idx != -1:
+                        if earliest_idx == -1 or idx < earliest_idx:
+                            earliest_idx = idx
+                            matched_delim = d
+
+                if matched_delim is None:
+                    break
+
+                # Extract sentence up to and including the delimiter
+                split_point = earliest_idx + len(matched_delim)
+                sentence = self.text_buffer[:split_point].strip()
+                self.text_buffer = self.text_buffer[split_point:]
+
+                if sentence:
+                    # Apply regex filters
+                    sentence = self._apply_substitutions(sentence)
                     if sentence:
                         self.get_logger().info(f"Aggregated sentence: '{sentence}'")
                         self.text_queue.put(sentence)
-                    self.text_buffer = ''
 
     def flush_timer_callback(self):
         """Flush the text buffer if the timeout has passed."""
@@ -363,9 +409,33 @@ class TTSnode(Node):
             if diff > timeout_ms:
                 sentence = self.text_buffer.strip()
                 if sentence:
-                    self.get_logger().info(f"Flushing buffer due to timeout: '{sentence}'")
-                    self.text_queue.put(sentence)
+                    # Apply regex filters
+                    sentence = self._apply_substitutions(sentence)
+                    if sentence:
+                        self.get_logger().info(f"Aggregated sentence: '{sentence}'")
+                        self.text_queue.put(sentence)
                 self.text_buffer = ''
+
+    def _apply_substitutions(self, text):
+        """Apply regex-based substitutions to the text."""
+        substitutes = self.get_parameter('substitute').value
+        if not substitutes or (len(substitutes) == 1 and substitutes[0] == ''):
+            return text
+
+        # Input must be pairs of [regex, replacement]
+        if len(substitutes) % 2 != 0:
+            self.get_logger().warn('Substitute parameter has odd length. Last item ignored.')
+            substitutes = substitutes[:-1]
+
+        for i in range(0, len(substitutes), 2):
+            pattern = substitutes[i]
+            replacement = substitutes[i+1]
+            try:
+                text = re.sub(pattern, replacement, text)
+            except re.error as e:
+                self.get_logger().error(f"Regex error for pattern '{pattern}': {e}")
+
+        return text.strip()
 
     def tts_loop(self):
         """Process the text queue and generate audio."""
@@ -393,27 +463,70 @@ class TTSnode(Node):
                 self.get_logger().info(f"Generating audio for: '{text}' (Language: {language})")
                 start_time = time.time()
 
-                # Build voice clone prompt mode
-                # x_vector_only_mode=True if ref_text is empty, otherwise icl_mode=True
-                x_vector_mode = True if not ref_text else False
+                control_instructions = self.get_parameter('control_instructions').value
 
-                # Generate audio
-                wavs, sr = self.model.generate_voice_clone(
-                    text=text,
-                    language=language,
-                    ref_audio=ref_audio,
-                    ref_text=ref_text if ref_text else None,
-                    x_vector_only_mode=x_vector_mode,
-                    do_sample=self.get_parameter('do_sample').value,
-                    temperature=self.get_parameter('temperature').value,
-                    top_p=self.get_parameter('top_p').value,
-                    top_k=self.get_parameter('top_k').value,
-                    repetition_penalty=self.get_parameter('repetition_penalty').value,
-                    subtalker_dosample=self.get_parameter('subtalker_dosample').value,
-                    subtalker_temperature=self.get_parameter('subtalker_temperature').value,
-                    subtalker_top_p=self.get_parameter('subtalker_top_p').value,
-                    subtalker_top_k=self.get_parameter('subtalker_top_k').value
-                )
+                if not control_instructions:
+                    # Build voice clone prompt mode
+                    # x_vector_only_mode=True if ref_text is empty, otherwise icl_mode=True
+                    x_vector_mode = True if not ref_text else False
+
+                    # Generate audio using the wrapper's voice cloning logic
+                    wavs, sr = self.model.generate_voice_clone(
+                        text=text,
+                        language=language,
+                        ref_audio=ref_audio,
+                        ref_text=ref_text if ref_text else None,
+                        x_vector_only_mode=x_vector_mode,
+                        do_sample=self.get_parameter('do_sample').value,
+                        temperature=self.get_parameter('temperature').value,
+                        top_p=self.get_parameter('top_p').value,
+                        top_k=self.get_parameter('top_k').value,
+                        repetition_penalty=self.get_parameter('repetition_penalty').value,
+                        subtalker_dosample=self.get_parameter('subtalker_dosample').value,
+                        subtalker_temperature=self.get_parameter('subtalker_temperature').value,
+                        subtalker_top_p=self.get_parameter('subtalker_top_p').value,
+                        subtalker_top_k=self.get_parameter('subtalker_top_k').value
+                    )
+                else:
+                    self.get_logger().info(f"Using control instructions: '{control_instructions}'")
+
+                    # Bypass the wrapper to call the core/base generative model directly
+                    # Tokenize input text as assistant
+                    input_text_fmt = self.model._build_assistant_text(text)
+                    input_ids = self.model._tokenize_texts([input_text_fmt])
+
+                    # Tokenize instructions
+                    instruct_text_fmt = self.model._build_instruct_text(control_instructions)
+                    instruct_ids = self.model._tokenize_texts([instruct_text_fmt])
+
+                    # Merge generation sampling parameters
+                    gen_kwargs = self.model._merge_generate_kwargs(
+                        do_sample=self.get_parameter('do_sample').value,
+                        temperature=self.get_parameter('temperature').value,
+                        top_p=self.get_parameter('top_p').value,
+                        top_k=self.get_parameter('top_k').value,
+                        repetition_penalty=self.get_parameter('repetition_penalty').value,
+                        subtalker_dosample=self.get_parameter('subtalker_dosample').value,
+                        subtalker_temperature=self.get_parameter('subtalker_temperature').value,
+                        subtalker_top_p=self.get_parameter('subtalker_top_p').value,
+                        subtalker_top_k=self.get_parameter('subtalker_top_k').value
+                    )
+
+                    # The exact signature of the base Qwen3TTSForConditionalGeneration generator:
+                    # def generate(self, input_ids=None, instruct_ids=None, ref_ids=None,
+                    #              voice_clone_prompt=None, languages=None, ...)
+                    talker_codes_list, _ = self.model.model.generate(
+                        input_ids=input_ids,
+                        instruct_ids=instruct_ids,
+                        languages=[language],
+                        non_streaming_mode=False,
+                        **gen_kwargs
+                    )
+
+                    # Decode the generated raw output tokens into waveform
+                    wavs, sr = self.model.model.speech_tokenizer.decode(
+                        [{"audio_codes": c} for c in talker_codes_list]
+                    )
 
                 latency = time.time() - start_time
                 self.get_logger().info(f'Generated audio in {latency:.2f}s')

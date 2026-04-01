@@ -70,8 +70,9 @@ The node uses static configuration for initialization and dynamic parameters for
 | :--- | :--- | :--- |
 | `model_id` | `string` | The Hugging Face model ID. Env: `Q3TTS_MODEL_ID` (Default: `Qwen/Qwen3-TTS-12Hz-1.7B-Base`) |
 | `model_dir` | `string` | Local directory for model caching. Env: `Q3TTS_MODEL_DIR` (Default: `./models`) |
-| `sentence_delimiters` | `string_array` | Characters that trigger synthesis. Env: `Q3TTS_SENTENCE_DELIMITERS` (Default: `[",", ".", ":", ";", "!", "?"]`) |
+| `sentence_delimiters` | `string_array` | Characters or strings that trigger synthesis (e.g. `[". ", "! ", "? "]`). Multi-character support helps prevent false triggers (like "ca."). Env: `Q3TTS_SENTENCE_DELIMITERS` (Default: `[",", ".", "!", "?"]`) |
 | `flush_timeout` | `integer` | Timeout in ms to flush buffer without delimiter. Env: `Q3TTS_FLUSH_TIMEOUT` (Default: `700`) |
+| `substitute` | `string_array` | Regex-based [pattern, replacement] pairs for text cleaning (HTML, emojis, etc.). Env: `Q3TTS_SUBSTITUTE` (Default: `[""]`) |
 
 #### Generation Settings (Dynamic)
 | Parameter | Type | Description |
@@ -94,6 +95,7 @@ The node uses static configuration for initialization and dynamic parameters for
 #### Voice Clone / ICL (Dynamic)
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
+| `control_instructions` | `string` | Instructions to dynamically shape voice without audio samples. **Note:** If defined, it actively overrides voice-cloning via `voice_ref_audio`! Env: `Q3TTS_CONTROL_INSTRUCTIONS` (Default: `""`) |
 | `voice_ref_audio` | `string` | Path to reference `.wav`. Env: `Q3TTS_VOICE_REF_AUDIO` (Default: `<pkg_share>/config/eva_24khz.wav`) |
 | `voice_ref_text` | `string` | Transcript or path to transcript file. Reading from file enables dynamic updates. Env: `Q3TTS_VOICE_REF_TEXT` (Default: `<pkg_share>/config/voice_ref_text.txt`) |
 
@@ -121,11 +123,28 @@ The node handles different sample rates for local playback and remote streaming:
 
 ## Troubleshooting Audio
 
-If you hear no sound or see "Invalid sample rate" errors (common with HDMI/GPU audio):
+If you hear no sound or see "Invalid sample rate" errors (common with HDMI/GPU audio), or experience **ALSA underrun** messages:
 
-1. **List Devices** (inside container):
+1. **Use aplay fallback**: Set the parameter `player:=aplay`. This bypasses the Python-native sound library and uses the more robust system utility to stream the audio data.
+2. **List Devices** (inside container):
    ```bash
    python3 -c "import sounddevice as sd; print(sd.query_devices())"
    ```
-2. **Set Device**: Find the index or name (e.g., `HDA NVidia: HDMI 0 (hw:2,3)`) and set the `audio_device` parameter.
-3. **Automatic Handling**: By default (`target_sample_rate: 0`), the node will try to auto-detect a working rate (falling back to 48kHz). You only need to manually set `target_sample_rate` if the auto-detection fails or you have very specific hardware needs.
+3. **Set Device**: Find the index or name (e.g., `HDA NVidia: HDMI 0 (hw:2,3)`) and set the `audio_device` parameter.
+4. **Automatic Handling**: By default (`target_sample_rate: 0`), the node will try to auto-detect a working rate (falling back to 48kHz). You only need to manually set `target_sample_rate` if the auto-detection fails or you have very specific hardware needs.
+
+### Text Cleaning Example
+
+The `substitute` parameter is designed to remove "garbage" characters that common LLMs might stream (like HTML leftovers or emojis) which cannot be spoken by a TTS model.
+
+```yaml
+# Example launch snippet
+ros2 run bob_q3tts tts --ros-args -p 'substitute:=[
+  "&nbsp;","",   # Remove non-breaking spaces
+  "<br>"," ",     # Replace <br> with space
+  "[\\U00010000-\\U0010ffff\\u2600-\\u27BF\\ufe00-\\ufe0f]","", # Remove emojis/icons
+  "https?://\\S+","", # Remove URLs
+  "[*~_|<>\\^`\\]\\[]"," ", # Remove markdown formatting chars
+  "\\s{2,}"," " # Normalize multiple spaces
+]'
+```
