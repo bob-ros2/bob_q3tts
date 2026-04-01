@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   tts:
     image: ghcr.io/bob-ros2/bob-q3tts:latest

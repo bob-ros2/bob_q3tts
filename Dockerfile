@@ -69,7 +69,7 @@ COPY --from=builder --chown=${USERNAME}:${USERNAME} /root/.local /home/${USERNAM
 COPY --from=builder --chown=${USERNAME}:${USERNAME} /app/ros2_ws/install /app/ros2_ws/install
 
 # Audio Config
-RUN echo "pcm.!default { type pulse fallback \"sysdefault\" } \n ctl.!default { type pulse fallback \"sysdefault\" }" > /etc/asound.conf
+RUN printf 'pcm.!default { type pulse fallback "sysdefault" }\nctl.!default { type pulse fallback "sysdefault" }\n' > /etc/asound.conf
 
 ENV HOME=/home/${USERNAME}
 ENV PATH=${HOME}/.local/bin:${PATH}
@@ -79,5 +79,5 @@ ENV ROS_HOME=/tmp/ros
 WORKDIR /app/ros2_ws
 USER ${USERNAME}
 
-ENTRYPOINT ["bash", "-c", "source /opt/ros/humble/setup.bash && source install/setup.bash && exec \"$@\""]
+ENTRYPOINT ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && source install/setup.bash && exec \"$@\"", "--"]
 CMD ["ros2", "run", "bob_q3tts", "tts"]
