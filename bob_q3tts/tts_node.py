@@ -70,11 +70,11 @@ class TTSnode(Node):
         )
         self.declare_parameter(
             'sentence_delimiters',
-            list(os.environ.get('Q3TTS_SENTENCE_DELIMITERS', ',.!?')),
+            list(os.environ.get('Q3TTS_SENTENCE_DELIMITERS', '')),
             ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING_ARRAY,
                 description=('Delimiters that trigger sentence aggregation. '
-                             'Empty [] disables splitting (helps maintain voice).')
+                             'Use [""] or empty list to disable splitting.')
             )
         )
         self.declare_parameter(
@@ -256,7 +256,8 @@ class TTSnode(Node):
             [''],
             ParameterDescriptor(
                 type=ParameterType.PARAMETER_STRING_ARRAY,
-                description='Array of [regex, replacement] pairs for text cleaning.'
+                description=('Array of [regex, replacement] pairs for text cleaning. '
+                             'Use [""] for no replacement.')
             )
         )
         self.file_index = self.get_parameter('file_start_index').value
@@ -361,8 +362,8 @@ class TTSnode(Node):
             self.text_buffer += input_text
 
             # Bypass aggregation completely if delimiters list is empty
-            if not delimiters or (len(delimiters) == 1 and delimiters[0] == ""):
-                # If we have something like [""], it will be handled by flush_timeout
+            if not delimiters or (len(delimiters) == 1 and delimiters[0] == ''):
+                # If we have something like [''], it will be handled by flush_timeout
                 return
 
             # Process buffer for any of the delimiters
@@ -525,7 +526,7 @@ class TTSnode(Node):
 
                     # Decode the generated raw output tokens into waveform
                     wavs, sr = self.model.model.speech_tokenizer.decode(
-                        [{"audio_codes": c} for c in talker_codes_list]
+                        [{'audio_codes': c} for c in talker_codes_list]
                     )
 
                 latency = time.time() - start_time

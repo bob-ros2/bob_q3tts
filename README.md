@@ -70,9 +70,9 @@ The node uses static configuration for initialization and dynamic parameters for
 | :--- | :--- | :--- |
 | `model_id` | `string` | The Hugging Face model ID. Env: `Q3TTS_MODEL_ID` (Default: `Qwen/Qwen3-TTS-12Hz-1.7B-Base`) |
 | `model_dir` | `string` | Local directory for model caching. Env: `Q3TTS_MODEL_DIR` (Default: `./models`) |
-| `sentence_delimiters` | `string_array` | Characters or strings that trigger synthesis (e.g. `[". ", "! ", "? "]`). Multi-character support helps prevent false triggers (like "ca."). Env: `Q3TTS_SENTENCE_DELIMITERS` (Default: `[",", ".", "!", "?"]`) |
+| `sentence_delimiters` | `string_array` | Characters or strings that trigger synthesis (e.g. `[". ", "! ", "? "]`). Use `[""]` or empty list `[]` to disable splitting. Env: `Q3TTS_SENTENCE_DELIMITERS` (Default: `[""]`) |
 | `flush_timeout` | `integer` | Timeout in ms to flush buffer without delimiter. Env: `Q3TTS_FLUSH_TIMEOUT` (Default: `700`) |
-| `substitute` | `string_array` | Regex-based [pattern, replacement] pairs for text cleaning (HTML, emojis, etc.). Env: `Q3TTS_SUBSTITUTE` (Default: `[""]`) |
+| `substitute` | `string_array` | Regex-based [pattern, replacement] pairs for text cleaning (HTML, emojis, etc.). Use `[""]` for no replacement. Env: `Q3TTS_SUBSTITUTE` (Default: `[""]`) |
 
 #### Generation Settings (Dynamic)
 | Parameter | Type | Description |
