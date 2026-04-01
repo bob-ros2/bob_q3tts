@@ -17,8 +17,9 @@ import sys
 
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
-    QApplication, QCheckBox, QFileDialog, QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QPushButton, QScrollArea, QSlider, QVBoxLayout, QWidget, QGridLayout
+    QApplication, QCheckBox, QFileDialog, QGridLayout, QGroupBox, QHBoxLayout,
+    QLabel, QLineEdit, QMainWindow, QPushButton, QScrollArea, QSlider,
+    QVBoxLayout, QWidget
 )
 from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
 from rcl_interfaces.srv import GetParameters, SetParameters
@@ -223,8 +224,8 @@ class GUInode(Node, QMainWindow):
         """Open a file dialog to select a WAV file."""
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Select Reference Audio", "",
-            "Audio Files (*.wav);;All Files (*)", options=options
+            self, 'Select Reference Audio', '',
+            'Audio Files (*.wav);;All Files (*)', options=options
         )
         if file_path:
             line_edit.setText(file_path)

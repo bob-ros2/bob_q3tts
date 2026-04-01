@@ -1,6 +1,6 @@
 # ROS Package [bob_q3tts](https://github.com/bob-ros2/bob_q3tts)
 
-[![Docker Build and Push](https://github.com/bob-ros2/bob_q3tts/actions/workflows/docker-image.yml/badge.svg)](https://github.com/bob-ros2/bob_q3tts/actions/workflows/docker-image.yml)
+[![Docker Build](https://github.com/bob-ros2/bob_q3tts/actions/workflows/docker-image.yml/badge.svg)](https://github.com/bob-ros2/bob_q3tts/actions/workflows/docker-image.yml)
 [![ROS 2 CI](https://github.com/bob-ros2/bob_q3tts/actions/workflows/ros-ci.yml/badge.svg)](https://github.com/bob-ros2/bob_q3tts/actions/workflows/ros-ci.yml)
 
 A ROS 2 wrapper for the **Qwen3-TTS** model, providing high-fidelity, low-latency text-to-speech with streaming aggregation and voice cloning capabilities. It also includes a Qt-based GUI for real-time parameter tuning.
