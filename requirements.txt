@@ -1,15 +1,12 @@
-# --- AI & Deep Learning Core ---
-# Torch will also be installed separately in the Dockerfile to ensure correct CUDA indexing.
-torch>=2.4.0
+# Transformers & Accelerate (matching working venv)
+transformers==4.57.3
+accelerate==1.12.0
+Pillow>=10.0.0
 
-# Qwen-TTS specific logic
-qwen-tts>=0.1.0
+# Qwen-TTS specific logic (downgrade to stable 0.0.5)
+qwen-tts==0.0.5
+flash-attn==2.8.3
 
-# Fast Attention Kernels (Warning: Compilation takes a long time during the first build!)
-# Version 2.6.x is stable for Hopper/Ada/Ampere GPUs.
-flash-attn>=2.6.3
-
-# --- Audio Engine ---
 # For reading and writing WAV files (libsndfile frontend)
 soundfile>=0.12.1
 

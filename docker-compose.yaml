@@ -21,7 +21,7 @@ services:
       - Q3TTS_VOICE_REF_AUDIO=/app/ros2_ws/src/bob_q3tts/config/eva_24khz.wav
       - Q3TTS_VOICE_REF_TEXT=/app/ros2_ws/src/bob_q3tts/config/voice_ref_text.txt
     volumes:
-      - ./models:/models
+      - /blue/dev/q3tts/models:/models
       - ./config:/app/ros2_ws/src/bob_q3tts/config
       - /run/user/1000/pulse:/run/user/1000/pulse
     devices:
