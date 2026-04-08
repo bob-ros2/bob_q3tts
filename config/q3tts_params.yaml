@@ -14,8 +14,8 @@
     subtalker_temperature: 0.9
     subtalker_top_p: 1.0
     subtalker_top_k: 50
-    voice_ref_audio: "./eva_24khz.wav"
-    voice_ref_text: "./voice_ref_text.txt"
+    voice_ref_audio: "./eva_24khz_de.wav"
+    voice_ref_text: "./voice_ref_text_de.txt"
     play: true
     player: "sys"
     audio_device: ""
