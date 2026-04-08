@@ -96,8 +96,20 @@ The node uses static configuration for initialization and dynamic parameters for
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `control_instructions` | `string` | Instructions to dynamically shape voice without audio samples. **Note:** If defined, it actively overrides voice-cloning via `voice_ref_audio`! Env: `Q3TTS_CONTROL_INSTRUCTIONS` (Default: `""`) |
-| `voice_ref_audio` | `string` | Path to reference `.wav`. Env: `Q3TTS_VOICE_REF_AUDIO` (Default: `<pkg_share>/config/eva_24khz.wav`) |
-| `voice_ref_text` | `string` | Transcript or path to transcript file. Reading from file enables dynamic updates. Env: `Q3TTS_VOICE_REF_TEXT` (Default: `<pkg_share>/config/voice_ref_text.txt`) |
+| `voice_ref_audio` | `string` | Path to reference `.wav`. Env: `Q3TTS_VOICE_REF_AUDIO` (Default: `<pkg_share>/config/eva_24khz_de.wav`) |
+| `voice_ref_text` | `string` | Transcript or path to transcript file. Reading from file enables dynamic updates. Env: `Q3TTS_VOICE_REF_TEXT` (Default: `<pkg_share>/config/voice_ref_text_de.txt`) |
+
+### Voice Cloning & Language Support
+
+The package provides reference files for high-quality voice cloning in both German and English. 
+
+- **German (Default)**: Use `eva_24khz_de.wav` and `voice_ref_text_de.txt`. Best for Bob's default personality.
+- **English**: Use `eva_24khz_en.wav` and `voice_ref_text_en.txt`. Use this if you want Eva to speak with a native English accent and proper prosody.
+
+To switch languages via CLI:
+```bash
+ros2 run bob_q3tts tts --ros-args -p language:=English -p voice_ref_audio:=/app/ros2_ws/install/bob_q3tts/share/bob_q3tts/config/eva_24khz_en.wav -p voice_ref_text:=/app/ros2_ws/install/bob_q3tts/share/bob_q3tts/config/voice_ref_text_en.txt
+```
 
 #### Output & Storage (Dynamic)
 | Parameter | Type | Description |
