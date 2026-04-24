@@ -250,7 +250,7 @@ class TTSnode(Node):
         )
         self.declare_parameter(
             'speaking_flag_delay',
-            0.2,
+            float(os.environ.get('Q3TTS_SPEAKING_FLAG_DELAY', '0.2')),
             ParameterDescriptor(
                 type=ParameterType.PARAMETER_DOUBLE,
                 description='Delay in seconds before setting speaking_flag to false.'
