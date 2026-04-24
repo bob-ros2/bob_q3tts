@@ -22,12 +22,15 @@ import time
 
 from ament_index_python.packages import get_package_share_directory
 import numpy as np
-from rcl_interfaces.msg import ParameterDescriptor
-from rcl_interfaces.msg import ParameterType
+
+from rcl_interfaces.msg import ParameterDescriptor, ParameterType
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int16MultiArray
-from std_msgs.msg import String
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile
+from std_msgs.msg import Bool, Int16MultiArray, String
+
+
+"""Qwen3-TTS ROS 2 Node."""
 
 
 class TTSnode(Node):
@@ -245,6 +248,14 @@ class TTSnode(Node):
                 description='Starting index for saved audio files.'
             )
         )
+        self.declare_parameter(
+            'speaking_flag_delay',
+            0.2,
+            ParameterDescriptor(
+                type=ParameterType.PARAMETER_DOUBLE,
+                description='Delay in seconds before setting speaking_flag to false.'
+            )
+        )
 
         # 2. State & Queues
         self.text_buffer = ''
@@ -263,6 +274,8 @@ class TTSnode(Node):
         )
         self.file_index = self.get_parameter('file_start_index').value
         self.inferred_target_sr = None
+        self._is_speaking = False
+        self._speaking_finish_time = 0.0  # Time in seconds (float)
 
         # 3. Subscriber & Publisher
         self.sub = self.create_subscription(
@@ -281,6 +294,20 @@ class TTSnode(Node):
             'audio_raw',
             10
         )
+
+        # 4. Speaking Flag (Transient Local / Latched)
+        speaking_qos = QoSProfile(
+            durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1
+        )
+        self.speaking_pub = self.create_publisher(
+            Bool,
+            'speaking_flag',
+            speaking_qos
+        )
+        # Initialize flag to False
+        self.speaking_pub.publish(Bool(data=False))
 
         # 4. Initialization & Threading
         self.model = None
@@ -337,8 +364,10 @@ class TTSnode(Node):
         self.tts_thread.start()
         self.audio_thread.start()
 
-        # Timer to flush buffer
+        # Timers
         self.flush_timer = self.create_timer(0.1, self.flush_timer_callback)
+        # 20Hz monitor
+        self.speaking_monitor_timer = self.create_timer(0.05, self.speaking_monitor_callback)
 
         self.get_logger().info("TTS Node ready and listening on topic 'text'.")
 
@@ -367,25 +396,36 @@ class TTSnode(Node):
                 # If we have something like [''], it will be handled by flush_timeout
                 return
 
-            # Process buffer for any of the delimiters
+            # Process buffer for any of the delimiters using regex for robustness
             while True:
-                earliest_idx = -1
-                matched_delim = None
+                earliest_match = None
 
                 for d in delimiters:
                     if not d:
                         continue
-                    idx = self.text_buffer.find(d)
-                    if idx != -1:
-                        if earliest_idx == -1 or idx < earliest_idx:
-                            earliest_idx = idx
-                            matched_delim = d
 
-                if matched_delim is None:
+                    try:
+                        # Escape literal dots and marks if they look like simple strings,
+                        # or just treat them as regex if they contain special chars.
+                        # For safety with legacy config, we'll try to match the delimiter literally
+                        # but allow any whitespace if it ends with a space.
+                        pattern = d
+                        if d.endswith(' '):
+                            pattern = re.escape(d.rstrip()) + r'\s+'
+
+                        match = re.search(pattern, self.text_buffer)
+                        if match:
+                            if earliest_match is None or match.start() < earliest_match.start():
+                                earliest_match = match
+                    except re.error as e:
+                        self.get_logger().error(f"Invalid delimiter regex '{d}': {e}")
+                        continue
+
+                if earliest_match is None:
                     break
 
-                # Extract sentence up to and including the delimiter
-                split_point = earliest_idx + len(matched_delim)
+                # Extract sentence up to and including the matched delimiter
+                split_point = earliest_match.end()
                 sentence = self.text_buffer[:split_point].strip()
                 self.text_buffer = self.text_buffer[split_point:]
 
@@ -567,7 +607,18 @@ class TTSnode(Node):
                 self.pub.publish(msg)
                 self.get_logger().info(f"Speaking: '{spoken_text}'")
 
-                # 3. Stream raw audio if subscribed (Bridge for streamer)
+                # 3. Update Speaking Flag state
+                duration = len(audio_data) / sr
+                with self.lock:
+                    now_seconds = self.get_clock().now().nanoseconds / 1e9
+                    # Accumulate finish time if we are already speaking or have queued audio
+                    self._speaking_finish_time = max(
+                        self._speaking_finish_time, now_seconds) + duration
+                    if not self._is_speaking:
+                        self._is_speaking = True
+                        self.speaking_pub.publish(Bool(data=True))
+
+                # 4. Stream raw audio if subscribed (Bridge for streamer)
                 if self.audio_pub.get_subscription_count() > 0:
                     try:
                         # 44100 Hz resample for the bridge
@@ -692,6 +743,21 @@ class TTSnode(Node):
                     os.remove(temp_file_path)
                 except Exception as e:
                     self.get_logger().warn(f'Failed to remove temp file {temp_file_path}: {e}')
+
+    def speaking_monitor_callback(self):
+        """Monitor the speaking duration and reset flag after delay."""
+        if not self._is_speaking:
+            return
+
+        now_seconds = self.get_clock().now().nanoseconds / 1e9
+        delay = self.get_parameter('speaking_flag_delay').value
+
+        with self.lock:
+            if now_seconds > (self._speaking_finish_time + delay):
+                self._is_speaking = False
+                self.speaking_pub.publish(Bool(data=False))
+                self._speaking_finish_time = 0.0
+                self.get_logger().info('Speaking finished (speaking_flag -> False)')
 
 
 def main(args=None):
