@@ -131,6 +131,17 @@ class TTSnode(Node):
                 description='Repetition penalty.'
             )
         )
+        self.declare_parameter(
+            'max_new_tokens',
+            int(os.environ.get('Q3TTS_MAX_NEW_TOKENS', '1024')),
+            ParameterDescriptor(
+                type=ParameterType.PARAMETER_INTEGER,
+                description=('Hard cap of audio codes per generation. The talker runs at '
+                             '12 Hz code rate, so 1024 is ~85 s of speech. Without it the '
+                             'checkpoint default (8192, ~11 min) lets a runaway generation '
+                             'babble until EOS. 0 falls back to the checkpoint default.')
+            )
+        )
 
         # 1. ROS Parameters - Subtalker Generation (Second Stage)
         self.declare_parameter(
@@ -527,7 +538,9 @@ class TTSnode(Node):
                         subtalker_dosample=self.get_parameter('subtalker_dosample').value,
                         subtalker_temperature=self.get_parameter('subtalker_temperature').value,
                         subtalker_top_p=self.get_parameter('subtalker_top_p').value,
-                        subtalker_top_k=self.get_parameter('subtalker_top_k').value
+                        subtalker_top_k=self.get_parameter('subtalker_top_k').value,
+                        # 0 => None => checkpoint generation_config default (8192)
+                        max_new_tokens=self.get_parameter('max_new_tokens').value or None
                     )
                 else:
                     self.get_logger().info(f"Using control instructions: '{control_instructions}'")
@@ -551,7 +564,9 @@ class TTSnode(Node):
                         subtalker_dosample=self.get_parameter('subtalker_dosample').value,
                         subtalker_temperature=self.get_parameter('subtalker_temperature').value,
                         subtalker_top_p=self.get_parameter('subtalker_top_p').value,
-                        subtalker_top_k=self.get_parameter('subtalker_top_k').value
+                        subtalker_top_k=self.get_parameter('subtalker_top_k').value,
+                        # 0 => None => checkpoint generation_config default (8192)
+                        max_new_tokens=self.get_parameter('max_new_tokens').value or None
                     )
 
                     # The exact signature of the base Qwen3TTSForConditionalGeneration generator:

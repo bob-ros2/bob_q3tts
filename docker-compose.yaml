@@ -38,4 +38,4 @@ services:
     network_mode: host
     ipc: host
     command: >
-      ros2 run bob_q3tts tts --ros-args  -p model_dir:=/models  -p language:=German  -p play:=true  -p temperature:=0.2  -p do_sample:=false
+      ros2 run bob_q3tts tts --ros-args  -p model_dir:=/models  -p language:=German  -p play:=true  -p do_sample:=true  -p max_new_tokens:=1024

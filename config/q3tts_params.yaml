@@ -10,6 +10,9 @@
     top_p: 1.0
     top_k: 50
     repetition_penalty: 1.05
+    # 12 Hz code rate: 1024 tokens ≈ 85 s per sentence. Bounds runaway
+    # generations; 0 restores the checkpoint default (8192 ≈ 11 min).
+    max_new_tokens: 1024
     subtalker_dosample: true
     subtalker_temperature: 0.9
     subtalker_top_p: 1.0

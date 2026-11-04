@@ -83,6 +83,7 @@ The node uses static configuration for initialization and dynamic parameters for
 | `top_p` | `double` | Nucleus sampling threshold. Env: `Q3TTS_TOP_P` (Default: `1.0`) |
 | `top_k` | `integer` | Top-k sampling limit. Env: `Q3TTS_TOP_K` (Default: `50`) |
 | `repetition_penalty` | `double` | Penalty for repeated sounds. Env: `Q3TTS_REPETITION_PENALTY` (Default: `1.05`) |
+| `max_new_tokens` | `integer` | Hard cap on generated audio codes per sentence. The talker runs at 12 Hz, so `1024` ≈ 85 s of speech. Bounds runaway/babble outputs; `0` falls back to the checkpoint default (8192 ≈ 11 min). Env: `Q3TTS_MAX_NEW_TOKENS` (Default: `1024`) |
 
 #### Subtalker Settings (Dynamic)
 | Parameter | Type | Description |

@@ -84,6 +84,9 @@ class GUInode(Node, QMainWindow):
             {'name': 'repetition_penalty', 'type': 'double', 'min': 1.0,
              'max': 2.0, 'scale': 100, 'label': 'Repetition Penalty',
              'group': 'Generation'},
+            {'name': 'max_new_tokens', 'type': 'int', 'min': 0, 'max': 8192,
+             'label': 'Max New Tokens (0 = model default)',
+             'group': 'Generation'},
 
             # Area: Subtalker
             {'name': 'subtalker_dosample', 'type': 'bool', 'group': 'Subtalker',
