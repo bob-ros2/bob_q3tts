@@ -611,30 +611,41 @@ class TTSnode(Node):
                 duration = len(audio_data) / sr
                 with self.lock:
                     now_seconds = self.get_clock().now().nanoseconds / 1e9
-                    # Accumulate finish time if we are already speaking or have queued audio
+                    # Start of processing this chunk
                     self._speaking_finish_time = max(
                         self._speaking_finish_time, now_seconds) + duration
+                    
                     if not self._is_speaking:
                         self._is_speaking = True
                         self.speaking_pub.publish(Bool(data=True))
+                        self.get_logger().debug('Speaking started (speaking_flag -> True)')
 
                 # 4. Stream raw audio if subscribed (Bridge for streamer)
+                # NOTE: .tolist() and resampling can be VERY slow for long audio!
                 if self.audio_pub.get_subscription_count() > 0:
                     try:
-                        # 44100 Hz resample for the bridge
+                        t_bridge_start = time.time()
                         stream_audio = self.resample_audio(audio_data, sr, 44100)
-                        # Float32 -> Int16 conversion (+ scaling)
                         stream_int16 = (stream_audio * 32767).astype(np.int16)
 
                         audio_msg = Int16MultiArray()
                         audio_msg.data = stream_int16.flatten().tolist()
                         self.audio_pub.publish(audio_msg)
+                        
+                        bridge_dur = time.time() - t_bridge_start
+                        if bridge_dur > 0.5:
+                            self.get_logger().warn(f'Audio bridge processing took {bridge_dur:.2f}s!')
                     except Exception as e:
                         self.get_logger().error(f'Failed to stream raw audio: {e}')
 
-                # 4. Play if enabled
+                # 5. Play if enabled
                 if self.get_parameter('play').value:
                     self.play_audio(audio_data, sr)
+                    # After physical playback finished, update the timestamp to the actual NOW
+                    with self.lock:
+                        actual_now = self.get_clock().now().nanoseconds / 1e9
+                        self._speaking_finish_time = actual_now
+                        self.get_logger().debug(f'Playback finished, flag will reset in {self.get_parameter("speaking_flag_delay").value}s')
 
                 self.audio_queue.task_done()
 
@@ -753,11 +764,14 @@ class TTSnode(Node):
         delay = self.get_parameter('speaking_flag_delay').value
 
         with self.lock:
-            if now_seconds > (self._speaking_finish_time + delay):
+            diff = (self._speaking_finish_time + delay) - now_seconds
+            if diff < 0:
                 self._is_speaking = False
                 self.speaking_pub.publish(Bool(data=False))
                 self._speaking_finish_time = 0.0
                 self.get_logger().info('Speaking finished (speaking_flag -> False)')
+            elif diff < 2.0: # Only log if close to finishing, to avoid spam
+                self.get_logger().debug(f'Speaking flag still active. Reset in {diff:.2f}s')
 
 
 def main(args=None):
